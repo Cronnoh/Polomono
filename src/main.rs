@@ -1,4 +1,7 @@
-use std::time::Duration;
+use std::{
+    cmp::{max, min},
+    time::Duration
+ };
 
 use sdl2::{
     rect::{Rect, Point},
@@ -12,6 +15,14 @@ use sdl2::{
 const WIDTH: usize = 10;
 const HEIGHT: usize = 20;
 const SCALE: u32 = 32;
+
+#[derive(Debug)]
+struct Inputs {
+    hard_drop: bool,
+    soft_drop: bool,
+    left: bool,
+    right: bool,
+}
 
 fn main() -> Result<(), String> {
     let sdl_context = sdl2::init()?;
@@ -28,10 +39,10 @@ fn main() -> Result<(), String> {
         .build()
         .map_err(|e| e.to_string())?;
 
-    let mut grid = [[0; WIDTH]; HEIGHT];
-    grid[5][5] = 1;
-    grid[5][4] = 2;
-    grid[7][4] = 3;
+    let mut grid: [[usize; WIDTH]; HEIGHT] = [[0; WIDTH]; HEIGHT];
+    grid[16][5] = 1;
+    grid[15][4] = 2;
+    grid[15][5] = 3;
     grid[19][0] = 4;
     grid[0][0] = 5;
     grid[19][9] = 6;
@@ -39,7 +50,16 @@ fn main() -> Result<(), String> {
 
     let texture_creator = canvas.texture_creator();
     let blocks = texture_creator.load_texture("assets/tet.png")?;
-                    
+
+    let mut inputs = Inputs {
+        hard_drop: false,
+        soft_drop: false,
+        left: false,
+        right: false
+    };
+
+    let mut current_position = (0, 0);
+
     let mut event_pump = sdl_context.event_pump()?;
     'running: loop {
         // Handle events
@@ -50,22 +70,57 @@ fn main() -> Result<(), String> {
                     break 'running;
                 }
                 Event::KeyDown { scancode: Some(Scancode::W), repeat: false, .. } => {
-                    grid[9][8] = (grid[9][8] + 1) % 7;
+                    inputs.hard_drop = true;
                 }
-                Event::KeyDown { scancode: Some(Scancode::A), repeat: false, .. } => {
-                    grid[8][8] = (grid[8][8] + 1) % 7;
+                Event::KeyUp { scancode: Some(Scancode::W), repeat: false, .. } => {
+                    inputs.hard_drop = false;
                 }
                 Event::KeyDown { scancode: Some(Scancode::S), repeat: false, .. } => {
-                    grid[7][8] = (grid[7][8] + 1) % 7;
+                    inputs.soft_drop = true;
+                }
+                Event::KeyUp { scancode: Some(Scancode::S), repeat: false, .. } => {
+                    inputs.soft_drop = false;
+                }
+                Event::KeyDown { scancode: Some(Scancode::A), repeat: false, .. } => {
+                    inputs.left = true;
+                }
+                Event::KeyUp { scancode: Some(Scancode::A), repeat: false, .. } => {
+                    inputs.left = false;
                 }
                 Event::KeyDown { scancode: Some(Scancode::D), repeat: false, .. } => {
-                    grid[6][8] = (grid[6][8] + 1) % 7;
+                    inputs.right = true;
+                }
+                Event::KeyUp { scancode: Some(Scancode::D), repeat: false, .. } => {
+                    inputs.right = false;
                 }
                 _ => {}
             }
         }
 
         // Update
+        let mut direction = 0;
+        if inputs.left {
+            inputs.left = false;
+            direction += -1;
+        }
+        if inputs.right {
+            inputs.right = false;
+            direction += 1
+        }
+
+        grid[current_position.1][current_position.0] = 0;
+        let mut new_position = max(current_position.0 as i32 + direction, 0);
+        new_position = min(new_position,  grid[0].len() as i32 - 1);
+        current_position.0 = new_position as usize;
+        grid[current_position.1][current_position.0] = 6;
+
+        if inputs.hard_drop {
+            hard_drop(&mut grid, current_position);
+            inputs.hard_drop = false;
+        }
+
+        let remove = filled_rows(&mut grid);
+        remove_rows(&mut grid, remove);
 
         // Render
         render(&mut canvas, &blocks, &grid)?;
@@ -78,7 +133,7 @@ fn main() -> Result<(), String> {
     Ok(())
 }
 
-fn render(canvas: &mut WindowCanvas, texture: &Texture, grid: &[[u32; WIDTH]; HEIGHT]) -> Result<(), String> {
+fn render(canvas: &mut WindowCanvas, texture: &Texture, grid: &[[usize; WIDTH]; HEIGHT]) -> Result<(), String> {
     canvas.set_draw_color(Color::RGB(64, 64, 64));
     canvas.clear();
 
@@ -100,4 +155,44 @@ fn render(canvas: &mut WindowCanvas, texture: &Texture, grid: &[[u32; WIDTH]; HE
     canvas.present();
 
     Ok(())
+}
+
+fn hard_drop(grid: &mut [[usize; WIDTH]; HEIGHT], current_position: (usize, usize)) {
+    for i in current_position.1+1..grid.len()-1 {
+        if grid[i+1][current_position.0] != 0 {
+            grid[i][current_position.0] = 6;
+            return;
+        }
+    }
+    grid[grid.len()-1][current_position.0] = 6;
+}
+
+fn filled_rows(grid: &mut [[usize; WIDTH]; HEIGHT]) -> Vec<usize> {
+    let mut remove = Vec::new();
+    for (i, row) in grid.iter().enumerate() {
+        let mut count = 0;
+        for value in row.iter() {
+            if *value == 0 {
+                break;
+            }
+            count += 1;
+        }
+        if count == grid[0].len() {
+            remove.push(i);
+        }
+    }
+    remove
+}
+
+fn remove_rows(grid: &mut [[usize; WIDTH]; HEIGHT], remove: Vec<usize>) {
+    for row in remove.iter() {
+        // Empty the row
+        for col in 0..grid[0].len() {
+            grid[*row][col] = 0;
+        }
+        // Swap the row upward
+        for current in (2..=*row).rev() {
+            grid.swap(current, current-1);
+        }
+    }
 }
