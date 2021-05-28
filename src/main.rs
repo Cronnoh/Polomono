@@ -3,6 +3,7 @@ use std::{
     time::Duration
  };
 
+use rand::Rng;
 use sdl2::{
     rect::{Rect, Point},
     render::{WindowCanvas, Texture},
@@ -12,8 +13,8 @@ use sdl2::{
     image::{InitFlag, LoadTexture},
 };
 
-const WIDTH: usize = 10;
-const HEIGHT: usize = 20;
+const MATRIX_WIDTH: usize = 10;
+const MATRIX_HEIGHT: usize = 20;
 const SCALE: u32 = 32;
 
 #[derive(Debug)]
@@ -39,7 +40,7 @@ fn main() -> Result<(), String> {
         .build()
         .map_err(|e| e.to_string())?;
 
-    let mut grid: [[usize; WIDTH]; HEIGHT] = [[0; WIDTH]; HEIGHT];
+    let mut grid: [[usize; MATRIX_WIDTH]; MATRIX_HEIGHT] = [[0; MATRIX_WIDTH]; MATRIX_HEIGHT];
     grid[16][5] = 1;
     grid[15][4] = 2;
     grid[15][5] = 3;
@@ -122,6 +123,8 @@ fn main() -> Result<(), String> {
         let remove = filled_rows(&mut grid);
         remove_rows(&mut grid, remove);
 
+        get_bag();
+
         // Render
         render(&mut canvas, &blocks, &grid)?;
         
@@ -133,7 +136,7 @@ fn main() -> Result<(), String> {
     Ok(())
 }
 
-fn render(canvas: &mut WindowCanvas, texture: &Texture, grid: &[[usize; WIDTH]; HEIGHT]) -> Result<(), String> {
+fn render(canvas: &mut WindowCanvas, texture: &Texture, grid: &[[usize; MATRIX_WIDTH]; MATRIX_HEIGHT]) -> Result<(), String> {
     canvas.set_draw_color(Color::RGB(64, 64, 64));
     canvas.clear();
 
@@ -157,7 +160,7 @@ fn render(canvas: &mut WindowCanvas, texture: &Texture, grid: &[[usize; WIDTH]; 
     Ok(())
 }
 
-fn hard_drop(grid: &mut [[usize; WIDTH]; HEIGHT], current_position: (usize, usize)) {
+fn hard_drop(grid: &mut [[usize; MATRIX_WIDTH]; MATRIX_HEIGHT], current_position: (usize, usize)) {
     for i in current_position.1+1..grid.len()-1 {
         if grid[i+1][current_position.0] != 0 {
             grid[i][current_position.0] = 6;
@@ -167,7 +170,7 @@ fn hard_drop(grid: &mut [[usize; WIDTH]; HEIGHT], current_position: (usize, usiz
     grid[grid.len()-1][current_position.0] = 6;
 }
 
-fn filled_rows(grid: &mut [[usize; WIDTH]; HEIGHT]) -> Vec<usize> {
+fn filled_rows(grid: &mut [[usize; MATRIX_WIDTH]; MATRIX_HEIGHT]) -> Vec<usize> {
     let mut remove = Vec::new();
     for (i, row) in grid.iter().enumerate() {
         let mut count = 0;
@@ -184,7 +187,7 @@ fn filled_rows(grid: &mut [[usize; WIDTH]; HEIGHT]) -> Vec<usize> {
     remove
 }
 
-fn remove_rows(grid: &mut [[usize; WIDTH]; HEIGHT], remove: Vec<usize>) {
+fn remove_rows(grid: &mut [[usize; MATRIX_WIDTH]; MATRIX_HEIGHT], remove: Vec<usize>) {
     for row in remove.iter() {
         // Empty the row
         for col in 0..grid[0].len() {
@@ -195,4 +198,15 @@ fn remove_rows(grid: &mut [[usize; WIDTH]; HEIGHT], remove: Vec<usize>) {
             grid.swap(current, current-1);
         }
     }
+}
+
+fn get_bag() -> [char; 7] {
+    let mut bag = ['I','T','O','J','L','S','Z'];
+    let mut rng = rand::thread_rng();
+    let len = bag.len();
+    for i in 0..len {
+        bag.swap(i, rng.gen_range(i..len));
+    }
+    println!("{:?}", bag);
+    bag
 }
