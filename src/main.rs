@@ -1,9 +1,6 @@
 mod pieces;
 
-use std::{
-    cmp::{max, min},
-    time::Duration
-};
+use std::{time::Duration};
 
 use rand::Rng;
 use sdl2::{
@@ -28,8 +25,8 @@ struct Inputs {
 }
 
 struct Position {
-    row: usize,
-    col: usize,
+    row: i32,
+    col: i32,
 }
 
 struct Piece<'a> {
@@ -60,7 +57,9 @@ fn main() -> Result<(), String> {
     grid[19][0] = 4;
     grid[0][0] = 5;
     grid[19][9] = 6;
-    grid[0][9] = 7;
+    grid[4][2] = 7;
+    grid[5][2] = 7;
+    // grid[6][2] = 7;
 
     let texture_creator = canvas.texture_creator();
     let blocks = texture_creator.load_texture("assets/tet.png")?;
@@ -76,11 +75,9 @@ fn main() -> Result<(), String> {
 
     let mut current_piece = Piece {
         pos: Position {row: 5, col: 4},
-        shape: &piece_list.I_type,
+        shape: &piece_list.T_type,
         rotation: 0,
     };
-
-    let mut current_position = Position{row: 0, col: 0};
 
     let mut event_pump = sdl_context.event_pump()?;
     'running: loop {
@@ -120,31 +117,22 @@ fn main() -> Result<(), String> {
         }
 
         // Update
-        if inputs.soft_drop {
-            current_piece.rotation = (current_piece.rotation + 1) % 4;
-        }
-        if inputs.right {
-            current_piece.pos.col += 1;
-        }
-        if inputs.left {
-            current_piece.pos.col -= 1;
-        }
-        update(&mut grid, &mut inputs, &mut current_position);
+        update(&mut grid, &mut inputs, &mut current_piece);
 
 
         // Render
         render(&mut canvas, &blocks, &grid, &current_piece)?;
         
         // Time management
-        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 15));
+        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }
 
     Ok(())
 }
 
-fn update(grid: &mut [[usize; MATRIX_WIDTH]; MATRIX_HEIGHT], inputs: &mut Inputs, current_position: &mut Position) {
+fn update(grid: &mut [[usize; MATRIX_WIDTH]; MATRIX_HEIGHT], inputs: &mut Inputs, current_piece: &mut Piece) {
     if inputs.hard_drop {
-        hard_drop(grid, &current_position);
+        // hard_drop(grid, &current_position);
         inputs.hard_drop = false;
         let remove = filled_rows(grid);
         remove_rows(grid, remove);
@@ -158,12 +146,11 @@ fn update(grid: &mut [[usize; MATRIX_WIDTH]; MATRIX_HEIGHT], inputs: &mut Inputs
             inputs.right = false;
             direction += 1
         }
-
-        // grid[current_position.row][current_position.col] = 0;
-        // let mut new_position = max(current_position.col as i32 + direction, 0);
-        // new_position = min(new_position,  grid[0].len() as i32 - 1);
-        // current_position.col = new_position as usize;
-        // grid[current_position.row][current_position.col] = 6;
+        if inputs.soft_drop {
+            inputs.soft_drop = false;
+            current_piece.rotation = (current_piece.rotation + 1) % 4;
+        }
+        move_piece_h(current_piece, grid, direction);
 
     }
 
@@ -190,8 +177,8 @@ fn render(canvas: &mut WindowCanvas, texture: &Texture, grid: &[[usize; MATRIX_W
     canvas.copy(&texture, Rect::new(0, 0, 16, 16), Rect::from_center(canvas_center, 64, 64))?;
 
     for (row, col) in piece.shape[piece.rotation].iter() {
-        let x = ((col + piece.pos.col) as u32 * SCALE) as i32;
-        let y = ((row + piece.pos.row) as u32 * SCALE) as i32;
+        let x = (*col as i32 + piece.pos.col) * SCALE as i32;
+        let y = (*row as i32 + piece.pos.row) * SCALE as i32;
         let  block = Rect::new(0, 0, 16, 16);
         canvas.copy(&texture, block, Rect::new(x, y, SCALE, SCALE))?;
     }
@@ -201,37 +188,31 @@ fn render(canvas: &mut WindowCanvas, texture: &Texture, grid: &[[usize; MATRIX_W
     Ok(())
 }
 
-fn hard_drop(grid: &mut [[usize; MATRIX_WIDTH]; MATRIX_HEIGHT], current_position: &Position) {
-    let row = find_collision_down(&grid, &current_position);
-    grid[row][current_position.col] = 6;
-}
+// fn hard_drop(grid: &mut [[usize; MATRIX_WIDTH]; MATRIX_HEIGHT], current_position: &Position) {
+//     let row = find_collision_down(&grid, &current_position);
+//     grid[row][current_position.col] = 6;
+// }
 
-// Returns farthest open space in direction
-fn find_collision_down(grid: &[[usize; MATRIX_WIDTH]; MATRIX_HEIGHT], current_position: &Position) -> usize {
-    for i in current_position.row+1..grid.len()-1 {
-        if grid[i+1][current_position.col] != 0 {
-            return i;
+// // Returns farthest open space in direction
+// fn find_collision_down(grid: &[[usize; MATRIX_WIDTH]; MATRIX_HEIGHT], current_position: &Position) -> usize {
+//     for i in current_position.row+1..grid.len()-1 {
+//         if grid[i+1][current_position.col] != 0 {
+//             return i;
+//         }
+//     }
+//     return grid.len()-1;
+// }
+
+fn move_piece_h(piece: &mut Piece, grid: &[[usize; MATRIX_WIDTH]; MATRIX_HEIGHT], direction: i32) {
+    for (row, col) in piece.shape[piece.rotation].iter() {
+        let new_row = (*row as i32 + piece.pos.row) as usize;
+        let new_col = (*col as i32 + piece.pos.col + direction) as usize;
+        // If the new_col is < 0 the the cast to usize makes it large so the first check handles out of bounds both left and right
+        if new_col >= grid[0].len() || grid[new_row][new_col] != 0 {
+            return;
         }
     }
-    return grid.len()-1;
-}
-
-fn find_collision_right(grid: &[[usize; MATRIX_WIDTH]; MATRIX_HEIGHT], current_position: &Position) -> usize {
-    for i in current_position.col+1..grid[0].len()-1 {
-        if grid[current_position.row][i+1] != 0 {
-            return i;
-        }
-    }
-    return grid[0].len()-1;
-}
-
-fn find_collision_left(grid: &[[usize; MATRIX_WIDTH]; MATRIX_HEIGHT], current_position: &Position) -> usize {
-    for i in (1..=current_position.col-1).rev() {
-        if grid[current_position.row][i-1] != 0 {
-            return i;
-        }
-    }
-    return 0;
+    piece.pos.col += direction;
 }
 
 fn filled_rows(grid: &mut [[usize; MATRIX_WIDTH]; MATRIX_HEIGHT]) -> Vec<usize> {
@@ -264,19 +245,12 @@ fn remove_rows(grid: &mut [[usize; MATRIX_WIDTH]; MATRIX_HEIGHT], remove: Vec<us
     }
 }
 
-fn get_bag() -> [char; 7] {
-    let mut bag = ['I','T','O','J','L','S','Z'];
-    let mut rng = rand::thread_rng();
-    let len = bag.len();
-    for i in 0..len {
-        bag.swap(i, rng.gen_range(i..len));
-    }
-    bag
-}
-
-/*
-Moving to the left
-    find the left-most block in every row of the piece
-    find the distance each of these could move without colliding
-    move the piece to the minimum of these values 
-*/
+// fn get_bag() -> [char; 7] {
+//     let mut bag = ['I','T','O','J','L','S','Z'];
+//     let mut rng = rand::thread_rng();
+//     let len = bag.len();
+//     for i in 0..len {
+//         bag.swap(i, rng.gen_range(i..len));
+//     }
+//     bag
+// }
