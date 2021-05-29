@@ -1,7 +1,9 @@
+mod pieces;
+
 use std::{
     cmp::{max, min},
     time::Duration
- };
+};
 
 use rand::Rng;
 use sdl2::{
@@ -23,6 +25,17 @@ struct Inputs {
     soft_drop: bool,
     left: bool,
     right: bool,
+}
+
+struct Position {
+    row: usize,
+    col: usize,
+}
+
+struct Piece<'a> {
+    pos: Position,
+    shape: &'a pieces::PieceType,
+    rotation: usize,
 }
 
 fn main() -> Result<(), String> {
@@ -59,7 +72,15 @@ fn main() -> Result<(), String> {
         right: false
     };
 
-    let mut current_position = (0, 0);
+    let piece_list = pieces::PieceList::new();
+
+    let mut current_piece = Piece {
+        pos: Position {row: 0, col: 0},
+        shape: &piece_list.I_type,
+        rotation: 0,
+    };
+
+    let mut current_position = Position{row: 0, col: 0};
 
     let mut event_pump = sdl_context.event_pump()?;
     'running: loop {
@@ -99,6 +120,25 @@ fn main() -> Result<(), String> {
         }
 
         // Update
+        update(&mut grid, &mut inputs, &mut current_position);
+
+        // Render
+        render(&mut canvas, &blocks, &grid)?;
+        
+        // Time management
+        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+    }
+
+    Ok(())
+}
+
+fn update(grid: &mut [[usize; MATRIX_WIDTH]; MATRIX_HEIGHT], inputs: &mut Inputs, current_position: &mut Position) {
+    if inputs.hard_drop {
+        hard_drop(grid, &current_position);
+        inputs.hard_drop = false;
+        let remove = filled_rows(grid);
+        remove_rows(grid, remove);
+    } else {
         let mut direction = 0;
         if inputs.left {
             inputs.left = false;
@@ -109,31 +149,15 @@ fn main() -> Result<(), String> {
             direction += 1
         }
 
-        grid[current_position.1][current_position.0] = 0;
-        let mut new_position = max(current_position.0 as i32 + direction, 0);
-        new_position = min(new_position,  grid[0].len() as i32 - 1);
-        current_position.0 = new_position as usize;
-        grid[current_position.1][current_position.0] = 6;
+        // grid[current_position.row][current_position.col] = 0;
+        // let mut new_position = max(current_position.col as i32 + direction, 0);
+        // new_position = min(new_position,  grid[0].len() as i32 - 1);
+        // current_position.col = new_position as usize;
+        // grid[current_position.row][current_position.col] = 6;
 
-        if inputs.hard_drop {
-            hard_drop(&mut grid, current_position);
-            inputs.hard_drop = false;
-        }
-
-        let remove = filled_rows(&mut grid);
-        remove_rows(&mut grid, remove);
-
-        get_bag();
-
-        // Render
-        render(&mut canvas, &blocks, &grid)?;
-        
-
-        // Time management
-        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }
 
-    Ok(())
+    // get_bag();
 }
 
 fn render(canvas: &mut WindowCanvas, texture: &Texture, grid: &[[usize; MATRIX_WIDTH]; MATRIX_HEIGHT]) -> Result<(), String> {
@@ -160,14 +184,37 @@ fn render(canvas: &mut WindowCanvas, texture: &Texture, grid: &[[usize; MATRIX_W
     Ok(())
 }
 
-fn hard_drop(grid: &mut [[usize; MATRIX_WIDTH]; MATRIX_HEIGHT], current_position: (usize, usize)) {
-    for i in current_position.1+1..grid.len()-1 {
-        if grid[i+1][current_position.0] != 0 {
-            grid[i][current_position.0] = 6;
-            return;
+fn hard_drop(grid: &mut [[usize; MATRIX_WIDTH]; MATRIX_HEIGHT], current_position: &Position) {
+    let row = find_collision_down(&grid, &current_position);
+    grid[row][current_position.col] = 6;
+}
+
+// Returns farthest open space in direction
+fn find_collision_down(grid: &[[usize; MATRIX_WIDTH]; MATRIX_HEIGHT], current_position: &Position) -> usize {
+    for i in current_position.row+1..grid.len()-1 {
+        if grid[i+1][current_position.col] != 0 {
+            return i;
         }
     }
-    grid[grid.len()-1][current_position.0] = 6;
+    return grid.len()-1;
+}
+
+fn find_collision_right(grid: &[[usize; MATRIX_WIDTH]; MATRIX_HEIGHT], current_position: &Position) -> usize {
+    for i in current_position.col+1..grid[0].len()-1 {
+        if grid[current_position.row][i+1] != 0 {
+            return i;
+        }
+    }
+    return grid[0].len()-1;
+}
+
+fn find_collision_left(grid: &[[usize; MATRIX_WIDTH]; MATRIX_HEIGHT], current_position: &Position) -> usize {
+    for i in (1..=current_position.col-1).rev() {
+        if grid[current_position.row][i-1] != 0 {
+            return i;
+        }
+    }
+    return 0;
 }
 
 fn filled_rows(grid: &mut [[usize; MATRIX_WIDTH]; MATRIX_HEIGHT]) -> Vec<usize> {
@@ -207,6 +254,12 @@ fn get_bag() -> [char; 7] {
     for i in 0..len {
         bag.swap(i, rng.gen_range(i..len));
     }
-    println!("{:?}", bag);
     bag
 }
+
+/*
+Moving to the left
+    find the left-most block in every row of the piece
+    find the distance each of these could move without colliding
+    move the piece to the minimum of these values 
+*/
