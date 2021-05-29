@@ -22,6 +22,9 @@ struct Inputs {
     soft_drop: bool,
     left: bool,
     right: bool,
+    rot_cw: bool,
+    rot_ccw: bool,
+    rot_180: bool,
 }
 
 struct Position {
@@ -68,7 +71,11 @@ fn main() -> Result<(), String> {
         hard_drop: false,
         soft_drop: false,
         left: false,
-        right: false
+        right: false,
+        rot_cw: false,
+        rot_ccw: false,
+        rot_180: false,
+
     };
 
     let piece_list = pieces::PieceList::new();
@@ -112,6 +119,24 @@ fn main() -> Result<(), String> {
                 Event::KeyUp { scancode: Some(Scancode::D), repeat: false, .. } => {
                     inputs.right = false;
                 }
+                Event::KeyDown { scancode: Some(Scancode::J), repeat: false, .. } => {
+                    inputs.rot_ccw = true;
+                }
+                Event::KeyUp { scancode: Some(Scancode::J), repeat: false, .. } => {
+                    inputs.rot_ccw = false;
+                }
+                Event::KeyDown { scancode: Some(Scancode::K), repeat: false, .. } => {
+                    inputs.rot_180 = true;
+                }
+                Event::KeyUp { scancode: Some(Scancode::K), repeat: false, .. } => {
+                    inputs.rot_180 = false;
+                }
+                Event::KeyDown { scancode: Some(Scancode::L), repeat: false, .. } => {
+                    inputs.rot_cw = true;
+                }
+                Event::KeyUp { scancode: Some(Scancode::L), repeat: false, .. } => {
+                    inputs.rot_cw = false;
+                }
                 _ => {}
             }
         }
@@ -146,9 +171,17 @@ fn update(grid: &mut [[usize; MATRIX_WIDTH]; MATRIX_HEIGHT], inputs: &mut Inputs
             inputs.right = false;
             direction += 1
         }
-        if inputs.soft_drop {
-            inputs.soft_drop = false;
-            current_piece.rotation = (current_piece.rotation + 1) % 4;
+        if inputs.rot_ccw {
+            inputs.rot_ccw = false;
+            rotate_piece(current_piece, grid, 3);
+        }
+        if inputs.rot_cw {
+            inputs.rot_cw = false;
+            rotate_piece(current_piece, grid, 1);
+        }
+        if inputs.rot_180 {
+            inputs.rot_180 = false;
+            rotate_piece(current_piece, grid, 2);
         }
         move_piece_h(current_piece, grid, direction);
 
@@ -205,14 +238,28 @@ fn render(canvas: &mut WindowCanvas, texture: &Texture, grid: &[[usize; MATRIX_W
 
 fn move_piece_h(piece: &mut Piece, grid: &[[usize; MATRIX_WIDTH]; MATRIX_HEIGHT], direction: i32) {
     for (row, col) in piece.shape[piece.rotation].iter() {
-        let new_row = (*row as i32 + piece.pos.row) as usize;
-        let new_col = (*col as i32 + piece.pos.col + direction) as usize;
+        let new_row = (*row + piece.pos.row) as usize;
+        let new_col = (*col + piece.pos.col + direction) as usize;
         // If the new_col is < 0 the the cast to usize makes it large so the first check handles out of bounds both left and right
         if new_col >= grid[0].len() || grid[new_row][new_col] != 0 {
             return;
         }
     }
     piece.pos.col += direction;
+}
+
+fn rotate_piece(piece: &mut Piece, grid: &[[usize; MATRIX_WIDTH]; MATRIX_HEIGHT], rotation: usize) {
+    let target_rotation = (piece.rotation + rotation) % 4;
+    for (row, col) in piece.shape[target_rotation].iter() {
+        let new_row = (*row + piece.pos.row) as usize;
+        let new_col = (*col + piece.pos.col) as usize;
+        // If the new_col is < 0 the the cast to usize makes it large so the first check handles out of bounds both left and right
+        if new_col >= grid[0].len() || grid[new_row][new_col] != 0 {
+            // Rotation causes collision, do wall kicks
+            return;
+        }
+    }
+    piece.rotation = target_rotation;
 }
 
 fn filled_rows(grid: &mut [[usize; MATRIX_WIDTH]; MATRIX_HEIGHT]) -> Vec<usize> {
