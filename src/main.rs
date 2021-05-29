@@ -75,7 +75,7 @@ fn main() -> Result<(), String> {
     let piece_list = pieces::PieceList::new();
 
     let mut current_piece = Piece {
-        pos: Position {row: 0, col: 0},
+        pos: Position {row: 5, col: 4},
         shape: &piece_list.I_type,
         rotation: 0,
     };
@@ -120,13 +120,23 @@ fn main() -> Result<(), String> {
         }
 
         // Update
+        if inputs.soft_drop {
+            current_piece.rotation = (current_piece.rotation + 1) % 4;
+        }
+        if inputs.right {
+            current_piece.pos.col += 1;
+        }
+        if inputs.left {
+            current_piece.pos.col -= 1;
+        }
         update(&mut grid, &mut inputs, &mut current_position);
 
+
         // Render
-        render(&mut canvas, &blocks, &grid)?;
+        render(&mut canvas, &blocks, &grid, &current_piece)?;
         
         // Time management
-        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 15));
     }
 
     Ok(())
@@ -160,7 +170,7 @@ fn update(grid: &mut [[usize; MATRIX_WIDTH]; MATRIX_HEIGHT], inputs: &mut Inputs
     // get_bag();
 }
 
-fn render(canvas: &mut WindowCanvas, texture: &Texture, grid: &[[usize; MATRIX_WIDTH]; MATRIX_HEIGHT]) -> Result<(), String> {
+fn render(canvas: &mut WindowCanvas, texture: &Texture, grid: &[[usize; MATRIX_WIDTH]; MATRIX_HEIGHT], piece: &Piece) -> Result<(), String> {
     canvas.set_draw_color(Color::RGB(64, 64, 64));
     canvas.clear();
 
@@ -178,6 +188,13 @@ fn render(canvas: &mut WindowCanvas, texture: &Texture, grid: &[[usize; MATRIX_W
         }
     }
     canvas.copy(&texture, Rect::new(0, 0, 16, 16), Rect::from_center(canvas_center, 64, 64))?;
+
+    for (row, col) in piece.shape[piece.rotation].iter() {
+        let x = ((col + piece.pos.col) as u32 * SCALE) as i32;
+        let y = ((row + piece.pos.row) as u32 * SCALE) as i32;
+        let  block = Rect::new(0, 0, 16, 16);
+        canvas.copy(&texture, block, Rect::new(x, y, SCALE, SCALE))?;
+    }
 
     canvas.present();
 
