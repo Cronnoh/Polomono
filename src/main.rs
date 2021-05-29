@@ -1,6 +1,6 @@
 mod pieces;
 
-use std::{time::Duration};
+use std::{cmp::min, time::Duration};
 
 use rand::Rng;
 use sdl2::{
@@ -54,14 +54,14 @@ fn main() -> Result<(), String> {
         .map_err(|e| e.to_string())?;
 
     let mut grid: [[usize; MATRIX_WIDTH]; MATRIX_HEIGHT] = [[0; MATRIX_WIDTH]; MATRIX_HEIGHT];
-    grid[16][5] = 1;
-    grid[15][4] = 2;
-    grid[15][5] = 3;
-    grid[19][0] = 4;
-    grid[0][0] = 5;
-    grid[19][9] = 6;
-    grid[4][2] = 7;
-    grid[5][2] = 7;
+    // grid[16][5] = 1;
+    // grid[15][4] = 2;
+    // grid[15][5] = 3;
+    // grid[19][0] = 4;
+    // grid[0][0] = 5;
+    // grid[19][9] = 6;
+    // grid[4][2] = 7;
+    // grid[5][2] = 7;
     // grid[6][2] = 7;
 
     let texture_creator = canvas.texture_creator();
@@ -81,7 +81,7 @@ fn main() -> Result<(), String> {
     let piece_list = pieces::PieceList::new();
 
     let mut current_piece = Piece {
-        pos: Position {row: 5, col: 4},
+        pos: Position {row: 0, col: 5},
         shape: &piece_list.T_type,
         rotation: 0,
     };
@@ -157,7 +157,7 @@ fn main() -> Result<(), String> {
 
 fn update(grid: &mut [[usize; MATRIX_WIDTH]; MATRIX_HEIGHT], inputs: &mut Inputs, current_piece: &mut Piece) {
     if inputs.hard_drop {
-        // hard_drop(grid, &current_position);
+        hard_drop(current_piece, grid);
         inputs.hard_drop = false;
         let remove = filled_rows(grid);
         remove_rows(grid, remove);
@@ -235,6 +235,28 @@ fn render(canvas: &mut WindowCanvas, texture: &Texture, grid: &[[usize; MATRIX_W
 //     }
 //     return grid.len()-1;
 // }
+
+fn hard_drop(piece: &mut Piece, grid: &mut [[usize; MATRIX_WIDTH]; MATRIX_HEIGHT]) {
+    let mut min_fall_distance = grid.len();
+    for (row, col) in piece.shape[piece.rotation].iter() {
+        let new_row = (*row + piece.pos.row) as usize;
+        let new_col = (*col + piece.pos.col) as usize;
+        let mut fall_distance = 0;
+        for i in new_row..grid.len() {
+            if grid[i][new_col] != 0 {
+                break;
+            }
+            fall_distance += 1;
+        }
+        min_fall_distance = min(min_fall_distance, fall_distance);
+    }
+
+    for (row, col) in piece.shape[piece.rotation].iter() {
+        let new_row = (*row + piece.pos.row) as usize + min_fall_distance - 1;
+        let new_col = (*col + piece.pos.col) as usize;
+        grid[new_row][new_col] = 6;
+    }
+}
 
 fn move_piece_h(piece: &mut Piece, grid: &[[usize; MATRIX_WIDTH]; MATRIX_HEIGHT], direction: i32) {
     for (row, col) in piece.shape[piece.rotation].iter() {
