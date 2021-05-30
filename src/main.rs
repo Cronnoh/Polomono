@@ -53,16 +53,6 @@ fn main() -> Result<(), String> {
         .build()
         .map_err(|e| e.to_string())?;
 
-    let mut grid: [[usize; MATRIX_WIDTH]; MATRIX_HEIGHT] = [[0; MATRIX_WIDTH]; MATRIX_HEIGHT];
-    // grid[16][5] = 1;
-    // grid[15][4] = 2;
-    // grid[15][5] = 3;
-    // grid[19][0] = 4;
-    // grid[0][0] = 5;
-    // grid[19][9] = 6;
-    // grid[4][2] = 7;
-    // grid[5][2] = 7;
-    // grid[6][2] = 7;
 
     let texture_creator = canvas.texture_creator();
     let blocks = texture_creator.load_texture("assets/tet.png")?;
@@ -78,11 +68,12 @@ fn main() -> Result<(), String> {
 
     };
 
-    let piece_list = pieces::PieceList::new();
+    let mut grid: [[usize; MATRIX_WIDTH]; MATRIX_HEIGHT] = [[0; MATRIX_WIDTH]; MATRIX_HEIGHT];
+    let piece_list = pieces::create_piece_map();
 
     let mut current_piece = Piece {
         pos: Position {row: 0, col: 5},
-        shape: &piece_list.T_type,
+        shape: &piece_list.get(&'T').unwrap(),
         rotation: 0,
     };
 
