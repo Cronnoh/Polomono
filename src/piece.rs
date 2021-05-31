@@ -17,7 +17,7 @@ pub struct Piece {
 impl Piece {
     pub fn new(shape: PieceType) -> Self {
         Self {
-            position: Position {row: 0, col: 5},
+            position: Position {row: 0, col: 4},
             shape,
             rotation: 0,
         }

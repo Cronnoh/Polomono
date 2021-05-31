@@ -4,6 +4,9 @@ use std::{collections::HashMap};
 
 use rand::Rng;
 
+const DAS: f64 = 0.1;
+const ARR: f64 = 0.0;
+
 enum MovementAction {
     HardDrop,
     SoftDrop,
@@ -43,29 +46,63 @@ impl Game {
         }
     }
 
-    pub fn update(&mut self, input: &Input) {
+    pub fn update(&mut self, input: &mut Input, elapsed: f64) {
         let (movement_action, rotation_action) = read_inputs(&input);
 
         match movement_action {
             MovementAction::HardDrop => {
+                input.hard_drop = false;
                 self.piece.hard_drop(&mut self.matrix);
                 let remove = filled_rows(&mut self.matrix);
                 remove_rows(&mut self.matrix, remove);
                 self.next_piece();
             }
             MovementAction::Left => {
-                self.piece.move_h(&self.matrix, -1);
+                if input.left_held == elapsed {
+                    self.piece.move_h(&self.matrix, -1);
+                }
+                if input.left_held > DAS {
+                    let mut time = elapsed;
+                    let mut col = self.matrix.len() as i32;
+                    while col != self.piece.position.col && time > ARR {
+                        col = self.piece.position.col;
+                        self.piece.move_h(&self.matrix, -1);
+                        time -= ARR;
+                    }
+
+                }
             }
             MovementAction::Right => {
-                self.piece.move_h(&self.matrix, 1);
+                if input.right_held == elapsed {
+                    self.piece.move_h(&self.matrix, 1);
+                }
+                if input.right_held > DAS {
+                    let mut col = self.matrix.len() as i32;
+                    let mut time = elapsed;
+                    while col != self.piece.position.col && time > ARR {
+                        col = self.piece.position.col;
+                        self.piece.move_h(&self.matrix, 1);
+                        time -= ARR;
+                    }
+
+                }
             }
             _ => {}
         }
 
         match rotation_action {
-            RotationAction::RotateCW => self.piece.rotate(&self.matrix, 1),
-            RotationAction::RotateCCW => self.piece.rotate(&self.matrix, 3),
-            RotationAction::Rotate180 => self.piece.rotate(&self.matrix, 2),
+            RotationAction::RotateCW => {
+                input.rot_cw = false;
+                self.piece.rotate(&self.matrix, 1);
+            }
+            RotationAction::RotateCCW => {
+                input.rot_ccw = false;
+                self.piece.rotate(&self.matrix, 3);
+            }
+            RotationAction::Rotate180 => {
+                input.rot_180 = false;
+                self.piece.rotate(&self.matrix, 2);
+            }
             _ => {}
         }
     }
