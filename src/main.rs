@@ -1,5 +1,6 @@
 mod piece;
 mod game;
+mod input;
 
 use std::{time::Duration};
 
@@ -16,17 +17,6 @@ const MATRIX_WIDTH: usize = 10;
 const MATRIX_HEIGHT: usize = 20;
 const SCALE: u32 = 32;
 
-#[derive(Debug)]
-pub struct Inputs {
-    hard_drop: bool,
-    soft_drop: bool,
-    left: bool,
-    right: bool,
-    rot_cw: bool,
-    rot_ccw: bool,
-    rot_180: bool,
-}
-
 fn main() -> Result<(), String> {
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
@@ -42,11 +32,10 @@ fn main() -> Result<(), String> {
         .build()
         .map_err(|e| e.to_string())?;
 
-
     let texture_creator = canvas.texture_creator();
     let blocks = texture_creator.load_texture("assets/tet.png")?;
 
-    let mut inputs = Inputs {
+    let mut input = input::Input {
         hard_drop: false,
         soft_drop: false,
         left: false,
@@ -67,54 +56,15 @@ fn main() -> Result<(), String> {
                 | Event::KeyDown { scancode: Some(Scancode::Escape), .. } => {
                     break 'running;
                 }
-                Event::KeyDown { scancode: Some(Scancode::W), repeat: false, .. } => {
-                    inputs.hard_drop = true;
+                Event::KeyDown{..} | Event::KeyUp{..} => {
+                    input::handle_input_event(&mut input, event);
                 }
-                Event::KeyUp { scancode: Some(Scancode::W), repeat: false, .. } => {
-                    inputs.hard_drop = false;
-                }
-                Event::KeyDown { scancode: Some(Scancode::S), repeat: false, .. } => {
-                    inputs.soft_drop = true;
-                }
-                Event::KeyUp { scancode: Some(Scancode::S), repeat: false, .. } => {
-                    inputs.soft_drop = false;
-                }
-                Event::KeyDown { scancode: Some(Scancode::A), repeat: false, .. } => {
-                    inputs.left = true;
-                }
-                Event::KeyUp { scancode: Some(Scancode::A), repeat: false, .. } => {
-                    inputs.left = false;
-                }
-                Event::KeyDown { scancode: Some(Scancode::D), repeat: false, .. } => {
-                    inputs.right = true;
-                }
-                Event::KeyUp { scancode: Some(Scancode::D), repeat: false, .. } => {
-                    inputs.right = false;
-                }
-                Event::KeyDown { scancode: Some(Scancode::J), repeat: false, .. } => {
-                    inputs.rot_ccw = true;
-                }
-                Event::KeyUp { scancode: Some(Scancode::J), repeat: false, .. } => {
-                    inputs.rot_ccw = false;
-                }
-                Event::KeyDown { scancode: Some(Scancode::K), repeat: false, .. } => {
-                    inputs.rot_180 = true;
-                }
-                Event::KeyUp { scancode: Some(Scancode::K), repeat: false, .. } => {
-                    inputs.rot_180 = false;
-                }
-                Event::KeyDown { scancode: Some(Scancode::L), repeat: false, .. } => {
-                    inputs.rot_cw = true;
-                }
-                Event::KeyUp { scancode: Some(Scancode::L), repeat: false, .. } => {
-                    inputs.rot_cw = false;
-                }
-                _ => {}
+                _ => {},
             }
         }
 
         // Update
-        game.update(&inputs);
+        game.update(&input);
 
 
         // Render
@@ -126,7 +76,6 @@ fn main() -> Result<(), String> {
 
     Ok(())
 }
-
 
 fn render(canvas: &mut WindowCanvas, texture: &Texture, game: &game::Game) -> Result<(), String> {
     canvas.set_draw_color(Color::RGB(64, 64, 64));

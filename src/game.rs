@@ -1,7 +1,23 @@
 use crate::piece::*;
+use crate::input::*;
 use std::{collections::HashMap};
 
 use rand::Rng;
+
+enum MovementAction {
+    HardDrop,
+    SoftDrop,
+    Left,
+    Right,
+    None,
+}
+
+enum RotationAction {
+    RotateCW,
+    RotateCCW,
+    Rotate180,
+    None,
+}
 
 pub struct Game {
     pub matrix: Vec<Vec<usize>>,
@@ -27,31 +43,30 @@ impl Game {
         }
     }
 
-    pub fn update(&mut self, inputs: &crate::Inputs) {
-        if inputs.hard_drop {
-            self.piece.hard_drop(&mut self.matrix);
-            let remove = filled_rows(&mut self.matrix);
-            remove_rows(&mut self.matrix, remove);
-            self.next_piece();
-        } else {
-            let mut direction = 0;
-            if inputs.left {
-                direction += -1;
-            }
-            if inputs.right {
-                direction += 1
-            }
-            if inputs.rot_ccw {
-                self.piece.rotate(&self.matrix, 3);
-            }
-            if inputs.rot_cw {
-                self.piece.rotate(&self.matrix, 1);
-            }
-            if inputs.rot_180 {
-                self.piece.rotate(&self.matrix, 2);
-            }
-            self.piece.move_h(&self.matrix, direction);
+    pub fn update(&mut self, input: &Input) {
+        let (movement_action, rotation_action) = read_inputs(&input);
 
+        match movement_action {
+            MovementAction::HardDrop => {
+                self.piece.hard_drop(&mut self.matrix);
+                let remove = filled_rows(&mut self.matrix);
+                remove_rows(&mut self.matrix, remove);
+                self.next_piece();
+            }
+            MovementAction::Left => {
+                self.piece.move_h(&self.matrix, -1);
+            }
+            MovementAction::Right => {
+                self.piece.move_h(&self.matrix, 1);
+            }
+            _ => {}
+        }
+
+        match rotation_action {
+            RotationAction::RotateCW => self.piece.rotate(&self.matrix, 1),
+            RotationAction::RotateCCW => self.piece.rotate(&self.matrix, 3),
+            RotationAction::Rotate180 => self.piece.rotate(&self.matrix, 2),
+            _ => {}
         }
     }
 
@@ -104,4 +119,22 @@ fn remove_rows(matrix: &mut Vec<Vec<usize>>, remove: Vec<usize>) {
             matrix.swap(current, current-1);
         }
     }
+}
+
+fn read_inputs(input: &Input) -> (MovementAction, RotationAction) {
+    let movement_action = match (input.hard_drop, input.soft_drop, input.left, input.right) {
+        (true, _, _, _) => MovementAction::HardDrop,
+        (_, true, _, _) => MovementAction::SoftDrop,
+        (_, _, true, false) => MovementAction::Left,
+        (_, _, false, true) => MovementAction::Right,
+        _ => MovementAction::None,
+    };
+
+    let rotation_action = match (input.rot_cw, input.rot_ccw, input.rot_180) {
+        (true, false, false) => RotationAction::RotateCW,
+        (false, true, false) => RotationAction::RotateCCW,
+        (false, false, true) => RotationAction::Rotate180,
+        _ => RotationAction::None,
+    };
+    (movement_action, rotation_action)
 }
