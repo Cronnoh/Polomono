@@ -23,16 +23,17 @@ impl Piece {
         }
     }
 
-    pub fn move_h(&mut self, grid: &Vec<Vec<usize>>, direction: i32) {
+    pub fn move_h(&mut self, grid: &Vec<Vec<usize>>, direction: i32) -> bool {
         for (row, col) in self.shape[self.rotation].iter() {
             let new_row = (*row + self.position.row) as usize;
             let new_col = (*col + self.position.col + direction) as usize;
             // If the new_col is < 0 the the cast to usize makes it large so the first check handles out of bounds both left and right
             if new_col >= grid[0].len() || grid[new_row][new_col] != 0 {
-                return;
+                return false;
             }
         }
         self.position.col += direction;
+        true
     }
 
     pub fn rotate(&mut self, grid: &Vec<Vec<usize>>, rotation: usize) {

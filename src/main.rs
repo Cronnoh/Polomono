@@ -2,7 +2,7 @@ mod piece;
 mod game;
 mod input;
 
-use std::{time::{Duration, Instant}};
+use std::time::Instant;
 
 use sdl2::{
     rect::{Rect, Point},
@@ -39,9 +39,9 @@ fn main() -> Result<(), String> {
         hard_drop: false,
         soft_drop: false,
         left: false,
-        left_held: 0.0,
+        left_held: 0,
         right: false,
-        right_held: 0.0,
+        right_held: 0,
         rot_cw: false,
         rot_ccw: false,
         rot_180: false,
@@ -51,7 +51,7 @@ fn main() -> Result<(), String> {
     let mut current_time = Instant::now();
     let mut event_pump = sdl_context.event_pump()?;
     'running: loop {
-        let elapsed = current_time.elapsed().as_secs_f64();
+        let elapsed = current_time.elapsed().as_millis();
         current_time = Instant::now();
 
         for event in event_pump.poll_iter() {
@@ -72,8 +72,7 @@ fn main() -> Result<(), String> {
         game.update(&mut input, elapsed);
 
         render(&mut canvas, &blocks, &game)?;
-        
-        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+
     }
 
     Ok(())

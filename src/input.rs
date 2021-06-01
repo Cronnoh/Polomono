@@ -5,9 +5,9 @@ pub struct Input {
     pub hard_drop: bool,
     pub soft_drop: bool,
     pub left: bool,
-    pub left_held: f64,
+    pub left_held: u128,
     pub right: bool,
-    pub right_held: f64,
+    pub right_held: u128,
     pub rot_cw: bool,
     pub rot_ccw: bool,
     pub rot_180: bool,
@@ -29,19 +29,19 @@ pub fn handle_input_event(input: &mut Input, event: Event) {
         }
         Event::KeyDown { scancode: Some(Scancode::A), repeat: false, .. } => {
             input.left = true;
-            input.left_held = 0.0;
+            input.left_held = 0;
         }
         Event::KeyUp { scancode: Some(Scancode::A), repeat: false, .. } => {
             input.left = false;
-            input.left_held = 0.0;
+            input.left_held = 0;
         }
         Event::KeyDown { scancode: Some(Scancode::D), repeat: false, .. } => {
             input.right = true;
-            input.right_held = 0.0;
+            input.right_held = 0;
         }
         Event::KeyUp { scancode: Some(Scancode::D), repeat: false, .. } => {
             input.right = false;
-            input.right_held = 0.0;
+            input.right_held = 0;
         }
         Event::KeyDown { scancode: Some(Scancode::J), repeat: false, .. } => {
             input.rot_ccw = true;
@@ -65,7 +65,7 @@ pub fn handle_input_event(input: &mut Input, event: Event) {
     }
 }
 
-pub fn update_held_times(input: &mut Input, elapsed: f64) {
+pub fn update_held_times(input: &mut Input, elapsed: u128) {
     if input.left {
         input.left_held += elapsed;
     }

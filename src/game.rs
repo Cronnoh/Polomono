@@ -1,11 +1,11 @@
 use crate::piece::*;
 use crate::input::*;
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
 use rand::Rng;
 
-const DAS: f64 = 0.1;
-const ARR: f64 = 0.0;
+const DAS: u128 = 100;
+const ARR: u128 = 0;
 
 enum MovementAction {
     HardDrop,
@@ -27,6 +27,10 @@ pub struct Game {
     pub piece: Piece,
     piece_data: HashMap<char, PieceType>,
     bag: Vec<char>,
+
+    das: u128,
+    arr: u128,
+    arr_leftover: u128,
 }
 
 impl Game {
@@ -43,10 +47,14 @@ impl Game {
             piece,
             piece_data,
             bag,
+
+            das: DAS,
+            arr: ARR,
+            arr_leftover: 0,
         }
     }
 
-    pub fn update(&mut self, input: &mut Input, elapsed: f64) {
+    pub fn update(&mut self, input: &mut Input, elapsed: u128) {
         let (movement_action, rotation_action) = read_inputs(&input);
 
         match movement_action {
@@ -58,34 +66,10 @@ impl Game {
                 self.next_piece();
             }
             MovementAction::Left => {
-                if input.left_held == elapsed {
-                    self.piece.move_h(&self.matrix, -1);
-                }
-                if input.left_held > DAS {
-                    let mut time = elapsed;
-                    let mut col = self.matrix.len() as i32;
-                    while col != self.piece.position.col && time > ARR {
-                        col = self.piece.position.col;
-                        self.piece.move_h(&self.matrix, -1);
-                        time -= ARR;
-                    }
-
-                }
+                self.handle_piece_movement(input.left_held, elapsed, -1);
             }
             MovementAction::Right => {
-                if input.right_held == elapsed {
-                    self.piece.move_h(&self.matrix, 1);
-                }
-                if input.right_held > DAS {
-                    let mut col = self.matrix.len() as i32;
-                    let mut time = elapsed;
-                    while col != self.piece.position.col && time > ARR {
-                        col = self.piece.position.col;
-                        self.piece.move_h(&self.matrix, 1);
-                        time -= ARR;
-                    }
-
-                }
+                self.handle_piece_movement(input.right_held, elapsed, 1);
             }
             _ => {}
         }
@@ -112,6 +96,24 @@ impl Game {
             self.bag = get_bag(&self.piece_data);
         }
         self.piece = Piece::new(self.piece_data.get(&self.bag.pop().unwrap()).unwrap().clone());
+    }
+
+    fn handle_piece_movement(&mut self, time_held: u128, elapsed: u128, direction: i32) {
+        if time_held == elapsed {
+            self.piece.move_h(&self.matrix, direction);
+            self.arr_leftover = 0;
+        }
+        if time_held > self.das {
+            let mut time = elapsed + self.arr_leftover;
+            while time > self.arr {
+                if !self.piece.move_h(&self.matrix, direction) {
+                    self.arr_leftover = 0;
+                    break;
+                }
+                time -= self.arr;
+            }
+            self.arr_leftover = time;
+        }
     }
 }
 
