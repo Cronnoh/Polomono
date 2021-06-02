@@ -4,8 +4,9 @@ mod input;
 
 use std::time::Instant;
 
+use piece::PieceColor;
 use sdl2::{
-    rect::{Rect, Point},
+    rect::Rect,
     render::{WindowCanvas, Texture},
     pixels::Color,
     event::Event,
@@ -33,7 +34,8 @@ fn main() -> Result<(), String> {
         .map_err(|e| e.to_string())?;
 
     let texture_creator = canvas.texture_creator();
-    let blocks = texture_creator.load_texture("assets/tet.png")?;
+    let blocks_texture = texture_creator.load_texture("assets/tet.png")?;
+    let blocks_regions = block_texture_regions(&blocks_texture)?;
 
     let mut input = input::Input {
         hard_drop: false,
@@ -71,37 +73,47 @@ fn main() -> Result<(), String> {
 
         game.update(&mut input, elapsed);
 
-        render(&mut canvas, &blocks, &game)?;
+        render(&mut canvas, &blocks_texture, &blocks_regions, &game)?;
 
     }
 
     Ok(())
 }
 
-fn render(canvas: &mut WindowCanvas, texture: &Texture, game: &game::Game) -> Result<(), String> {
+fn block_texture_regions(texture: &Texture) -> Result<Vec<Rect>, String> {
+    let mut regions = Vec::new();
+    let query = texture.query();
+
+    for i in 0..PieceColor::ColorCount as i32 {
+        let offset = i*query.height as i32;
+        if offset >= query.width as i32 {
+            return Err("Block texture file is not properly formed".to_string());
+        }
+        regions.push(Rect::new(offset, 0, query.height, query.height));
+    }
+
+    Ok(regions)
+}
+
+fn render(canvas: &mut WindowCanvas, texture: &Texture, regions: &Vec<Rect>, game: &game::Game) -> Result<(), String> {
     canvas.set_draw_color(Color::RGB(64, 64, 64));
     canvas.clear();
 
-    let (width, height) = canvas.output_size()?;
-    let canvas_center = Point::new(width as i32 / 2, height as i32 / 2);
+    // let (width, height) = canvas.output_size()?;
+    // let canvas_center = Point::new(width as i32 / 2, height as i32 / 2);
 
     for (i, row) in game.matrix.iter().enumerate() {
-        for (j, value) in row.iter().enumerate() {
-            if *value > 0 {
-                let x = (j as u32 * SCALE) as i32;
-                let y = (i as u32 * SCALE) as i32;
-                let block = Rect::new(((*value-1)*16) as i32, 0, 16, 16);
-                canvas.copy(&texture, block, Rect::new(x, y, SCALE, SCALE))?;
-            }
+        for (j, color) in row.iter().enumerate() {
+            let x = (j as u32 * SCALE) as i32;
+            let y = (i as u32 * SCALE) as i32;
+            canvas.copy(&texture, regions[*color as usize], Rect::new(x, y, SCALE, SCALE))?;
         }
     }
-    canvas.copy(&texture, Rect::new(0, 0, 16, 16), Rect::from_center(canvas_center, 64, 64))?;
 
     for (row, col) in game.piece.get_orientation().iter() {
         let x = (*col as i32 + game.piece.position.col) * SCALE as i32;
         let y = (*row as i32 + game.piece.position.row) * SCALE as i32;
-        let  block = Rect::new(0, 0, 16, 16);
-        canvas.copy(&texture, block, Rect::new(x, y, SCALE, SCALE))?;
+        canvas.copy(&texture, regions[game.piece.color as usize], Rect::new(x, y, SCALE, SCALE))?;
     }
 
     canvas.present();

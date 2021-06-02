@@ -22,8 +22,10 @@ enum RotationAction {
     None,
 }
 
+pub type Matrix = Vec<Vec<PieceColor>>;
+
 pub struct Game {
-    pub matrix: Vec<Vec<usize>>,
+    pub matrix: Matrix,
     pub piece: Piece,
     piece_data: HashMap<char, PieceType>,
     bag: Vec<char>,
@@ -35,12 +37,12 @@ pub struct Game {
 
 impl Game {
     pub fn new(matrix_width: usize, matrix_height: usize) -> Self {
-        let matrix = vec![vec![0; matrix_width]; matrix_height];
+        let matrix = vec![vec![PieceColor::Empty; matrix_width]; matrix_height];
         let piece_data = load_piece_data();
 
-        let mut bag = get_bag(&piece_data);
+        let mut bag = generate_bag(&piece_data);
         let first_piece = piece_data.get(&bag.pop().unwrap()).unwrap();
-        let piece = Piece::new(first_piece.clone());
+        let piece = Piece::new(first_piece.shape.clone(), first_piece.color);
 
         Self {
             matrix,
@@ -93,9 +95,10 @@ impl Game {
 
     fn next_piece(&mut self) {
         if self.bag.is_empty() {
-            self.bag = get_bag(&self.piece_data);
+            self.bag = generate_bag(&self.piece_data);
         }
-        self.piece = Piece::new(self.piece_data.get(&self.bag.pop().unwrap()).unwrap().clone());
+        let new_piece = self.piece_data.get(&self.bag.pop().unwrap()).unwrap().clone();
+        self.piece = Piece::new(new_piece.shape.clone(), new_piece.color);
     }
 
     fn handle_piece_movement(&mut self, time_held: u128, elapsed: u128, direction: i32) {
@@ -117,7 +120,7 @@ impl Game {
     }
 }
 
-fn get_bag(piece_list: &HashMap<char, PieceType>) -> Vec<char> {
+fn generate_bag(piece_list: &HashMap<char, PieceType>) -> Vec<char> {
     // Get all pieces from the list
     let mut bag: Vec<char> = piece_list.keys().cloned().collect();
 
@@ -130,12 +133,12 @@ fn get_bag(piece_list: &HashMap<char, PieceType>) -> Vec<char> {
     bag
 }
 
-fn filled_rows(matrix: &mut Vec<Vec<usize>>) -> Vec<usize> {
+fn filled_rows(matrix: &mut Matrix) -> Vec<usize> {
     let mut remove = Vec::new();
     for (i, row) in matrix.iter().enumerate() {
         let mut count = 0;
         for value in row.iter() {
-            if *value == 0 {
+            if *value == PieceColor::Empty {
                 break;
             }
             count += 1;
@@ -147,14 +150,14 @@ fn filled_rows(matrix: &mut Vec<Vec<usize>>) -> Vec<usize> {
     remove
 }
 
-fn remove_rows(matrix: &mut Vec<Vec<usize>>, remove: Vec<usize>) {
+fn remove_rows(matrix: &mut Matrix, remove: Vec<usize>) {
     for row in remove.iter() {
         // Empty the row
         for col in 0..matrix[0].len() {
-            matrix[*row][col] = 0;
+            matrix[*row][col] = PieceColor::Empty;
         }
         // Swap the row upward
-        for current in (2..=*row).rev() {
+        for current in (1..=*row).rev() {
             matrix.swap(current, current-1);
         }
     }
