@@ -69,6 +69,8 @@ impl Game {
             self.gravity_timer -= self.gravity;
             if !self.piece.movement(&self.matrix, 0, 1) {
                 self.piece.lock(&mut self.matrix);
+                let remove = filled_rows(&mut self.matrix);
+                remove_rows(&mut self.matrix, remove);
                 self.next_piece();
                 break;
             }
