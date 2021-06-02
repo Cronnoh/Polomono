@@ -200,6 +200,19 @@ pub fn load_piece_data<'a>() -> HashMap<char, PieceType> {
             color: PieceColor::Gray,
         });
 
+    piece_list.insert(
+        'X',
+        PieceType {
+            shape: [
+                vec!((0,1), (1,0), (1,1), (1,2), (2,1)),
+                vec!((0,1), (1,0), (1,1), (1,2), (2,1)),
+                vec!((0,1), (1,0), (1,1), (1,2), (2,1)),
+                vec!((0,1), (1,0), (1,1), (1,2), (2,1)),
+            ],
+            color: PieceColor::Gray,
+        });
+
+
 
     piece_list
 }
