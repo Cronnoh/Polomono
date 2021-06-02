@@ -45,7 +45,8 @@ impl Game {
 
         let mut bag = generate_bag(&piece_data);
         let first_piece = piece_data.get(&bag.pop().unwrap()).unwrap();
-        let piece = Piece::new(first_piece.shape.clone(), first_piece.color);
+        let mut piece = Piece::new(first_piece.shape.clone(), first_piece.color);
+        piece.update_ghost(&matrix);
 
         Self {
             matrix,
@@ -116,6 +117,7 @@ impl Game {
         }
         let new_piece = self.piece_data.get(&self.bag.pop().unwrap()).unwrap().clone();
         self.piece = Piece::new(new_piece.shape.clone(), new_piece.color);
+        self.piece.update_ghost(&self.matrix);
     }
 
     fn handle_piece_movement(&mut self, time_held: u128, elapsed: u128, direction: i32) {

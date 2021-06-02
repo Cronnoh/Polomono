@@ -33,6 +33,7 @@ pub struct Piece {
     shape: PieceShape,
     pub color: PieceColor,
     rotation: usize,
+    pub ghost_position: i32,
 }
 
 impl Piece {
@@ -42,6 +43,7 @@ impl Piece {
             shape,
             color,
             rotation: 0,
+            ghost_position: 0,
         }
     }
 
@@ -64,6 +66,7 @@ impl Piece {
         }
         self.position.row += v_dir;
         self.position.col += h_dir;
+        self.update_ghost(&matrix);
         true
     }
 
@@ -74,24 +77,12 @@ impl Piece {
             return false;
         }
         self.rotation = target_rotation;
+        self.update_ghost(&matrix);
         true
     }
 
     pub fn hard_drop(&mut self, matrix: &mut Matrix) {
-        let mut min_fall_distance = matrix.len();
-        for (rel_row, rel_col) in self.shape[self.rotation].iter() {
-            let row = (*rel_row + self.position.row) as usize;
-            let col = (*rel_col + self.position.col) as usize;
-            let mut fall_distance = 0;
-            for i in row..matrix.len() {
-                if matrix[i][col] != PieceColor::Empty {
-                    break;
-                }
-                fall_distance += 1;
-            }
-            min_fall_distance = min(min_fall_distance, fall_distance);
-        }
-        self.position.row += min_fall_distance as i32 - 1;
+        self.position.row = self.ghost_position;
         self.lock(matrix);
     }
 
@@ -105,6 +96,23 @@ impl Piece {
             let col = (*rel_col + self.position.col) as usize;
             matrix[row][col] = self.color;
         }
+    }
+
+    pub fn update_ghost(&mut self, matrix: &Matrix) {
+        let mut min_fall_distance = matrix.len();
+        for (rel_row, rel_col) in self.shape[self.rotation].iter() {
+            let row = (*rel_row + self.position.row) as usize;
+            let col = (*rel_col + self.position.col) as usize;
+            let mut fall_distance = 0;
+            for i in row..matrix.len() {
+                if matrix[i][col] != PieceColor::Empty {
+                    break;
+                }
+                fall_distance += 1;
+            }
+            min_fall_distance = min(min_fall_distance, fall_distance);
+        }
+        self.ghost_position = self.position.row + min_fall_distance as i32 - 1;
     }
 }
 
@@ -217,8 +225,6 @@ pub fn load_piece_data<'a>() -> HashMap<char, PieceType> {
             ],
             color: PieceColor::Gray,
         });
-
-
 
     piece_list
 }

@@ -7,7 +7,7 @@ use std::time::Instant;
 use piece::PieceColor;
 use sdl2::{
     rect::Rect,
-    render::{WindowCanvas, Texture},
+    render::{WindowCanvas, Texture, BlendMode},
     pixels::Color,
     event::Event,
     keyboard::Scancode,
@@ -34,7 +34,8 @@ fn main() -> Result<(), String> {
         .map_err(|e| e.to_string())?;
 
     let texture_creator = canvas.texture_creator();
-    let blocks_texture = texture_creator.load_texture("assets/tet.png")?;
+    let mut blocks_texture = texture_creator.load_texture("assets/tet.png")?;
+    blocks_texture.set_blend_mode(BlendMode::Blend);
     let blocks_regions = block_texture_regions(&blocks_texture)?;
 
     let mut input = input::Input {
@@ -76,7 +77,7 @@ fn main() -> Result<(), String> {
 
         game.update(&mut input, elapsed);
 
-        render(&mut canvas, &blocks_texture, &blocks_regions, &game)?;
+        render(&mut canvas, &mut blocks_texture, &blocks_regions, &game)?;
 
     }
 
@@ -98,13 +99,14 @@ fn block_texture_regions(texture: &Texture) -> Result<Vec<Rect>, String> {
     Ok(regions)
 }
 
-fn render(canvas: &mut WindowCanvas, texture: &Texture, regions: &Vec<Rect>, game: &game::Game) -> Result<(), String> {
+fn render(canvas: &mut WindowCanvas, texture: &mut Texture, regions: &Vec<Rect>, game: &game::Game) -> Result<(), String> {
     canvas.set_draw_color(Color::RGB(64, 64, 64));
     canvas.clear();
 
     // let (width, height) = canvas.output_size()?;
     // let canvas_center = Point::new(width as i32 / 2, height as i32 / 2);
 
+    texture.set_alpha_mod(255);
     for (i, row) in game.matrix.iter().enumerate() {
         for (j, color) in row.iter().enumerate() {
             let x = (j as u32 * SCALE) as i32;
@@ -113,6 +115,29 @@ fn render(canvas: &mut WindowCanvas, texture: &Texture, regions: &Vec<Rect>, gam
         }
     }
 
+    /* 
+    Ghost Piece is drawn transparently over a white background to brighten it up and create an outline.
+    The regular piece is draw afterward so that it is on top when it intersects with the ghost piece.
+    */
+
+    // Draw ghost piece outline
+    canvas.set_draw_color(Color::RGB(255, 255, 255));
+    for (row, col) in game.piece.get_orientation().iter() {
+        let ghost_x = (*col as i32 + game.piece.position.col) * SCALE as i32;
+        let ghost_y = (*row + game.piece.ghost_position) * SCALE as i32;
+        canvas.fill_rect(Rect::new(ghost_x-2, ghost_y-2, SCALE+4, SCALE+4))?;
+    }
+
+    // Draw ghost piece
+    texture.set_alpha_mod(192);
+    for (row, col) in game.piece.get_orientation().iter() {
+        let ghost_x = (*col as i32 + game.piece.position.col) * SCALE as i32;
+        let ghost_y = (*row + game.piece.ghost_position) * SCALE as i32;
+        canvas.copy(&texture, regions[game.piece.color as usize], Rect::new(ghost_x, ghost_y, SCALE, SCALE))?;
+    }
+
+    // Draw piece
+    texture.set_alpha_mod(255);
     for (row, col) in game.piece.get_orientation().iter() {
         let x = (*col as i32 + game.piece.position.col) * SCALE as i32;
         let y = (*row as i32 + game.piece.position.row) * SCALE as i32;
