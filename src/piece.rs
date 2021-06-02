@@ -10,8 +10,8 @@ pub enum PieceColor {
     Yellow,
     Blue,
     Orange,
-    Red,
     Green,
+    Red,
     Gray,
     ColorCount
 }
@@ -39,7 +39,7 @@ pub struct Piece {
 impl Piece {
     pub fn new(shape: PieceShape, color: PieceColor) -> Self {
         Self {
-            position: Position {row: 0, col: 4},
+            position: Position {row: 0, col: 3},
             shape,
             color,
             rotation: 0,
@@ -173,7 +173,7 @@ pub fn load_piece_data<'a>() -> HashMap<char, PieceType> {
                 vec!((1,1), (1,2), (2,0), (2,1)),
                 vec!((0,0), (1,0), (1,1), (2,1)),
             ],
-            color: PieceColor::Red,
+            color: PieceColor::Green,
         });
 
     piece_list.insert(
@@ -185,17 +185,17 @@ pub fn load_piece_data<'a>() -> HashMap<char, PieceType> {
                 vec!((1,0), (1,1), (2,1), (2,2)),
                 vec!((0,1), (1,0), (1,1), (2,0)),
             ],
-            color: PieceColor::Green,
+            color: PieceColor::Red,
         });
 
     piece_list.insert(
         '2',
         PieceType {
             shape: [
-                vec!((0,0), (0,1)),
+                vec!((0,1), (0,2)),
+                vec!((0,2), (1,2)),
+                vec!((1,1), (1,2)),
                 vec!((0,1), (1,1)),
-                vec!((1,0), (1,1)),
-                vec!((0,0), (1,0)),
             ],
             color: PieceColor::Gray,
         });
