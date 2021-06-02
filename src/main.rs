@@ -62,6 +62,9 @@ fn main() -> Result<(), String> {
                 | Event::KeyDown { scancode: Some(Scancode::Escape), .. } => {
                     break 'running;
                 }
+                Event::KeyDown { scancode: Some(Scancode::R), repeat: false, ..} => {
+                    game = game::Game::new(MATRIX_WIDTH, MATRIX_HEIGHT);
+                }
                 Event::KeyDown{..} | Event::KeyUp{..} => {
                     input::handle_input_event(&mut input, event);
                 }

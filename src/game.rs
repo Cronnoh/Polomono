@@ -6,6 +6,7 @@ use rand::Rng;
 
 const DAS: u128 = 100;
 const ARR: u128 = 0;
+const GRAVITY: u128 = 250;
 
 enum MovementAction {
     HardDrop,
@@ -33,6 +34,8 @@ pub struct Game {
     das: u128,
     arr: u128,
     arr_leftover: u128,
+    gravity: u128,
+    gravity_timer: u128,
 }
 
 impl Game {
@@ -53,11 +56,23 @@ impl Game {
             das: DAS,
             arr: ARR,
             arr_leftover: 0,
+            gravity: GRAVITY,
+            gravity_timer: 0,
         }
     }
 
     pub fn update(&mut self, input: &mut Input, elapsed: u128) {
         let (movement_action, rotation_action) = read_inputs(&input);
+
+        self.gravity_timer += elapsed;
+        while self.gravity_timer > self.gravity {
+            self.gravity_timer -= self.gravity;
+            if !self.piece.movement(&self.matrix, 0, 1) {
+                self.piece.lock(&mut self.matrix);
+                self.next_piece();
+                break;
+            }
+        }
 
         match movement_action {
             MovementAction::HardDrop => {
@@ -103,13 +118,13 @@ impl Game {
 
     fn handle_piece_movement(&mut self, time_held: u128, elapsed: u128, direction: i32) {
         if time_held == elapsed {
-            self.piece.move_h(&self.matrix, direction);
+            self.piece.movement(&self.matrix, direction, 0);
             self.arr_leftover = 0;
         }
         if time_held > self.das {
             let mut time = elapsed + self.arr_leftover;
             while time > self.arr {
-                if !self.piece.move_h(&self.matrix, direction) {
+                if !self.piece.movement(&self.matrix, direction, 0) {
                     self.arr_leftover = 0;
                     break;
                 }

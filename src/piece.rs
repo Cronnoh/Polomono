@@ -29,7 +29,6 @@ pub struct Position {
 }
 
 pub struct Piece {
-    
     pub position: Position,
     shape: PieceShape,
     pub color: PieceColor,
@@ -47,35 +46,38 @@ impl Piece {
     }
 
     /* A funtion that checks for collision given a rotation and a move direction */
-
-    pub fn move_h(&mut self, matrix: &Matrix, direction: i32) -> bool {
-        for (rel_row, rel_col) in self.shape[self.rotation].iter() {
-            let row = (*rel_row + self.position.row) as usize;
-            let col = (*rel_col + self.position.col + direction) as usize;
-            // If the new_col is < 0 the the cast to usize makes it large so the first check handles out of bounds both left and right
-            if col >= matrix[0].len() || matrix[row][col] != PieceColor::Empty {
-                return false;
+    fn check_collision(&self, matrix: &Matrix, h_dir: i32, v_dir: i32, rotation: usize) -> bool {
+        for (rel_row, rel_col) in self.shape[rotation].iter() {
+            let row = (*rel_row + self.position.row + v_dir) as usize;
+            let col = (*rel_col + self.position.col + h_dir) as usize;
+            // If col is < 0 the the cast to usize makes it large so the first check handles out of bounds both left and right
+            if col >= matrix[0].len() || row >= matrix.len() || matrix[row][col] != PieceColor::Empty {
+                return true;
             }
         }
-        self.position.col += direction;
+        return false;
+    }
+
+    pub fn movement(&mut self, matrix: &Matrix, h_dir: i32, v_dir: i32) -> bool {
+        if self.check_collision(matrix, h_dir, v_dir, self.rotation) {
+            return false;
+        }
+        self.position.row += v_dir;
+        self.position.col += h_dir;
         true
     }
 
-    pub fn rotate(&mut self, matrix: &Matrix, rotation: usize) {
+    pub fn rotate(&mut self, matrix: &Matrix, rotation: usize) -> bool {
         let target_rotation = (self.rotation + rotation) % 4;
-        for (rel_row, rel_col) in self.shape[target_rotation].iter() {
-            let row = (*rel_row + self.position.row) as usize;
-            let col = (*rel_col + self.position.col) as usize;
-            // If the new_col is < 0 the the cast to usize makes it large so the first check handles out of bounds both left and right
-            if col >= matrix[0].len() || matrix[row][col] != PieceColor::Empty {
-                // Rotation causes collision, do wall kicks
-                return;
-            }
+        if self.check_collision(matrix, 0, 0, target_rotation) {
+            // Rotation causes a collision do wall kicks
+            return false;
         }
         self.rotation = target_rotation;
+        true
     }
 
-    pub fn hard_drop(&self, matrix: &mut Matrix) {
+    pub fn hard_drop(&mut self, matrix: &mut Matrix) {
         let mut min_fall_distance = matrix.len();
         for (rel_row, rel_col) in self.shape[self.rotation].iter() {
             let row = (*rel_row + self.position.row) as usize;
@@ -89,16 +91,20 @@ impl Piece {
             }
             min_fall_distance = min(min_fall_distance, fall_distance);
         }
-
-        for (row, col) in self.shape[self.rotation].iter() {
-            let new_row = (*row + self.position.row) as usize + min_fall_distance - 1;
-            let new_col = (*col + self.position.col) as usize;
-            matrix[new_row][new_col] = self.color;
-        }
+        self.position.row += min_fall_distance as i32 - 1;
+        self.lock(matrix);
     }
 
     pub fn get_orientation(&self) -> &Vec<(i32, i32)> {
         &self.shape[self.rotation]
+    }
+
+    pub fn lock(&self, matrix: &mut Matrix) {
+        for (rel_row, rel_col) in self.shape[self.rotation].iter() {
+            let row = (*rel_row + self.position.row) as usize;
+            let col = (*rel_col + self.position.col) as usize;
+            matrix[row][col] = self.color;
+        }
     }
 }
 
