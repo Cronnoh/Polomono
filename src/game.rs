@@ -10,7 +10,6 @@ const GRAVITY: u128 = 250;
 
 enum MovementAction {
     HardDrop,
-    SoftDrop,
     Left,
     Right,
     None,
@@ -64,26 +63,14 @@ impl Game {
 
     pub fn update(&mut self, input: &mut Input, elapsed: u128) {
         let (movement_action, rotation_action) = read_inputs(&input);
-
-        self.gravity_timer += elapsed;
-        while self.gravity_timer > self.gravity {
-            self.gravity_timer -= self.gravity;
-            if !self.piece.movement(&self.matrix, 0, 1) {
-                self.piece.lock(&mut self.matrix);
-                let remove = filled_rows(&mut self.matrix);
-                remove_rows(&mut self.matrix, remove);
-                self.next_piece();
-                break;
-            }
-        }
+        let mut placed_piece = false;
+        let mut gravity = self.gravity;
 
         match movement_action {
             MovementAction::HardDrop => {
                 input.hard_drop = false;
                 self.piece.hard_drop(&mut self.matrix);
-                let remove = filled_rows(&mut self.matrix);
-                remove_rows(&mut self.matrix, remove);
-                self.next_piece();
+                placed_piece = true;
             }
             MovementAction::Left => {
                 self.handle_piece_movement(input.left_held, elapsed, -1);
@@ -108,6 +95,25 @@ impl Game {
                 self.piece.rotate(&self.matrix, 2);
             }
             _ => {}
+        }
+
+        if input.soft_drop {
+            gravity /= 4;
+        }
+        self.gravity_timer += elapsed;
+        while self.gravity_timer > gravity {
+            self.gravity_timer -= gravity;
+            if !self.piece.movement(&self.matrix, 0, 1) {
+                self.piece.lock(&mut self.matrix);
+                placed_piece = true;
+                break;
+            }
+        }
+
+        if placed_piece {
+            let remove = filled_rows(&mut self.matrix);
+            remove_rows(&mut self.matrix, remove);
+            self.next_piece();
         }
     }
 
@@ -183,11 +189,10 @@ fn remove_rows(matrix: &mut Matrix, remove: Vec<usize>) {
 }
 
 fn read_inputs(input: &Input) -> (MovementAction, RotationAction) {
-    let movement_action = match (input.hard_drop, input.soft_drop, input.left, input.right) {
-        (true, _, _, _) => MovementAction::HardDrop,
-        (_, true, _, _) => MovementAction::SoftDrop,
-        (_, _, true, false) => MovementAction::Left,
-        (_, _, false, true) => MovementAction::Right,
+    let movement_action = match (input.hard_drop, input.left, input.right) {
+        (true, _, _) => MovementAction::HardDrop,
+        (_, true, false) => MovementAction::Left,
+        (_, false, true) => MovementAction::Right,
         _ => MovementAction::None,
     };
 

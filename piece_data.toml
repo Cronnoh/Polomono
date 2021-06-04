@@ -1,5 +1,5 @@
 # Pieces are defined as lists of pairs of [row, column] coordinates representing 
-# blocks that are filled in relative to the top left corner.
+# blocks that are filled in, relative to the top left corner.
 # There are 4 coordinate lists per piece, one for each rotation.
 
 # Valid colors:
