@@ -1,10 +1,10 @@
 mod piece;
 mod game;
 mod input;
+use piece::PieceColor;
 
 use std::time::Instant;
 
-use piece::PieceColor;
 use sdl2::{
     rect::Rect,
     render::{WindowCanvas, Texture, BlendMode},
@@ -49,8 +49,8 @@ fn main() -> Result<(), String> {
         rot_ccw: false,
         rot_180: false,
     };
-
-    let mut game = game::Game::new(MATRIX_WIDTH, MATRIX_HEIGHT);
+    
+    let mut game = game::Game::new(MATRIX_WIDTH, MATRIX_HEIGHT)?;
     let mut current_time = Instant::now();
     let mut event_pump = sdl_context.event_pump()?;
     'running: loop {
@@ -64,7 +64,7 @@ fn main() -> Result<(), String> {
                     break 'running;
                 }
                 Event::KeyDown { scancode: Some(Scancode::R), repeat: false, ..} => {
-                    game = game::Game::new(MATRIX_WIDTH, MATRIX_HEIGHT);
+                    game = game::Game::new(MATRIX_WIDTH, MATRIX_HEIGHT)?;
                 }
                 Event::KeyDown{..} | Event::KeyUp{..} => {
                     input::handle_input_event(&mut input, event);
@@ -123,24 +123,24 @@ fn render(canvas: &mut WindowCanvas, texture: &mut Texture, regions: &Vec<Rect>,
     // Draw ghost piece outline
     canvas.set_draw_color(Color::RGB(255, 255, 255));
     for (row, col) in game.piece.get_orientation().iter() {
-        let ghost_x = (*col as i32 + game.piece.position.col) * SCALE as i32;
-        let ghost_y = (*row + game.piece.ghost_position) * SCALE as i32;
+        let ghost_x = (*col + game.piece.position.col) as i32 * SCALE as i32;
+        let ghost_y = (*row + game.piece.ghost_position) as i32 * SCALE as i32;
         canvas.fill_rect(Rect::new(ghost_x-2, ghost_y-2, SCALE+4, SCALE+4))?;
     }
 
     // Draw ghost piece
     texture.set_alpha_mod(192);
     for (row, col) in game.piece.get_orientation().iter() {
-        let ghost_x = (*col as i32 + game.piece.position.col) * SCALE as i32;
-        let ghost_y = (*row + game.piece.ghost_position) * SCALE as i32;
+        let ghost_x = (*col + game.piece.position.col) as i32 * SCALE as i32;
+        let ghost_y = (*row + game.piece.ghost_position) as i32 * SCALE as i32;
         canvas.copy(&texture, regions[game.piece.color as usize], Rect::new(ghost_x, ghost_y, SCALE, SCALE))?;
     }
 
     // Draw piece
     texture.set_alpha_mod(255);
     for (row, col) in game.piece.get_orientation().iter() {
-        let x = (*col as i32 + game.piece.position.col) * SCALE as i32;
-        let y = (*row as i32 + game.piece.position.row) * SCALE as i32;
+        let x = (*col + game.piece.position.col) as i32 * SCALE as i32;
+        let y = (*row + game.piece.position.row) as i32 * SCALE as i32;
         canvas.copy(&texture, regions[game.piece.color as usize], Rect::new(x, y, SCALE, SCALE))?;
     }
 

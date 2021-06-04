@@ -1,8 +1,10 @@
-use std::{cmp::min, collections::HashMap};
-
 use crate::game::Matrix;
 
-#[derive(Copy, Clone, PartialEq)]
+use std::{cmp::min, collections::HashMap, fs};
+use serde::Deserialize;
+
+
+#[derive(Copy, Clone, PartialEq, Deserialize)]
 pub enum PieceColor {
     Empty,
     Cyan,
@@ -16,16 +18,17 @@ pub enum PieceColor {
     ColorCount
 }
 
-pub type PieceShape = [Vec<(i32, i32)>; 4];
+pub type PieceShape = [Vec<(i8, i8)>; 4];
 
+#[derive(Deserialize)]
 pub struct PieceType {
     pub shape: PieceShape,
     pub color: PieceColor,
 }
 
 pub struct Position {
-    pub row: i32,
-    pub col: i32,
+    pub row: i8,
+    pub col: i8,
 }
 
 pub struct Piece {
@@ -33,7 +36,7 @@ pub struct Piece {
     shape: PieceShape,
     pub color: PieceColor,
     rotation: usize,
-    pub ghost_position: i32,
+    pub ghost_position: i8,
 }
 
 impl Piece {
@@ -48,7 +51,7 @@ impl Piece {
     }
 
     /* A funtion that checks for collision given a rotation and a move direction */
-    fn check_collision(&self, matrix: &Matrix, h_dir: i32, v_dir: i32, rotation: usize) -> bool {
+    fn check_collision(&self, matrix: &Matrix, h_dir: i8, v_dir: i8, rotation: usize) -> bool {
         for (rel_row, rel_col) in self.shape[rotation].iter() {
             let row = (*rel_row + self.position.row + v_dir) as usize;
             let col = (*rel_col + self.position.col + h_dir) as usize;
@@ -60,7 +63,7 @@ impl Piece {
         return false;
     }
 
-    pub fn movement(&mut self, matrix: &Matrix, h_dir: i32, v_dir: i32) -> bool {
+    pub fn movement(&mut self, matrix: &Matrix, h_dir: i8, v_dir: i8) -> bool {
         if self.check_collision(matrix, h_dir, v_dir, self.rotation) {
             return false;
         }
@@ -86,7 +89,7 @@ impl Piece {
         self.lock(matrix);
     }
 
-    pub fn get_orientation(&self) -> &Vec<(i32, i32)> {
+    pub fn get_orientation(&self) -> &Vec<(i8, i8)> {
         &self.shape[self.rotation]
     }
 
@@ -112,119 +115,14 @@ impl Piece {
             }
             min_fall_distance = min(min_fall_distance, fall_distance);
         }
-        self.ghost_position = self.position.row + min_fall_distance as i32 - 1;
+        self.ghost_position = self.position.row + min_fall_distance as i8 - 1;
     }
 }
 
-pub fn load_piece_data<'a>() -> HashMap<char, PieceType> {
-    let mut piece_list = HashMap::new();
-    piece_list.insert(
-        'I',
-        PieceType {
-            shape: [
-                vec!((0,0), (0,1), (0,2), (0,3)),
-                vec!((0,2), (1,2), (2,2), (3,2)),
-                vec!((1,0), (1,1), (1,2), (1,3)),
-                vec!((0,1), (1,1), (2,1), (3,1)),
-            ],
-            color: PieceColor::Cyan,
-        });
-
-    piece_list.insert(
-        'T',
-        PieceType {
-            shape: [
-                vec!((0,1), (1,0), (1,1), (1,2)),
-                vec!((0,1), (1,1), (1,2), (2,1)),
-                vec!((1,0), (1,1), (1,2), (2,1)),
-                vec!((0,1), (1,0), (1,1), (2,1)),
-            ],
-            color: PieceColor::Magenta,
-        });
-
-    piece_list.insert(
-        'O',
-        PieceType {
-            shape: [
-                vec!((0,1), (0,2), (1,1), (1,2)),
-                vec!((0,1), (0,2), (1,1), (1,2)),
-                vec!((0,1), (0,2), (1,1), (1,2)),
-                vec!((0,1), (0,2), (1,1), (1,2)),
-            ],
-            color: PieceColor::Yellow,
-        });
-
-    piece_list.insert(
-        'J',
-        PieceType {
-            shape: [
-                vec!((0,0), (1,0), (1,1), (1,2)),
-                vec!((0,1), (0,2), (1,1), (2,1)),
-                vec!((1,0), (1,1), (1,2), (2,2)),
-                vec!((0,1), (1,1), (2,0), (2,1)),
-            ],
-            color: PieceColor::Blue,
-        });
-
-    piece_list.insert(
-        'L',
-        PieceType {
-            shape: [
-                vec!((0,2), (1,0), (1,1), (1,2)),
-                vec!((0,1), (1,1), (2,1), (2,2)),
-                vec!((1,0), (1,1), (1,2), (2,0)),
-                vec!((0,0), (0,1), (1,1), (2,1)),
-            ],
-            color: PieceColor::Orange,
-        });
-
-    piece_list.insert(
-        'S',
-        PieceType {
-            shape: [
-                vec!((0,1), (0,2), (1,0), (1,1)),
-                vec!((0,1), (1,1), (1,2), (2,2)),
-                vec!((1,1), (1,2), (2,0), (2,1)),
-                vec!((0,0), (1,0), (1,1), (2,1)),
-            ],
-            color: PieceColor::Green,
-        });
-
-    piece_list.insert(
-        'Z',
-        PieceType {
-            shape: [
-                vec!((0,0), (0,1), (1,1), (1,2)),
-                vec!((0,2), (1,1), (1,2), (2,1)),
-                vec!((1,0), (1,1), (2,1), (2,2)),
-                vec!((0,1), (1,0), (1,1), (2,0)),
-            ],
-            color: PieceColor::Red,
-        });
-
-    piece_list.insert(
-        '2',
-        PieceType {
-            shape: [
-                vec!((0,1), (0,2)),
-                vec!((0,2), (1,2)),
-                vec!((1,1), (1,2)),
-                vec!((0,1), (1,1)),
-            ],
-            color: PieceColor::Gray,
-        });
-
-    piece_list.insert(
-        'X',
-        PieceType {
-            shape: [
-                vec!((0,1), (1,0), (1,1), (1,2), (2,1)),
-                vec!((0,2), (1,2), (2,2), (3,2), (4,2)),
-                vec!((1,0), (1,1), (1,2), (1,3), (1,4)),
-                vec!((0,1), (1,1), (2,1), (3,1), (4,1)),
-            ],
-            color: PieceColor::Gray,
-        });
-
-    piece_list
+pub fn load_piece_data() -> Result<HashMap<String, PieceType>, String> {
+    let piece_data_file = fs::read_to_string("piece_data.toml")
+        .map_err(|e| format!("Error opening piece_data.toml: {}", e.to_string()))?;
+    let piece_data = toml::from_str(&piece_data_file)
+        .map_err(|e| format!("Error reading piece_data.toml: {}", e.to_string()))?;
+    Ok(piece_data)
 }

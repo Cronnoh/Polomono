@@ -17,10 +17,10 @@ enum MovementAction {
 }
 
 enum RotationAction {
-    RotateCW,
-    RotateCCW,
-    Rotate180,
     None,
+    RotateCW,
+    Rotate180,
+    RotateCCW,
 }
 
 pub type Matrix = Vec<Vec<PieceColor>>;
@@ -28,8 +28,8 @@ pub type Matrix = Vec<Vec<PieceColor>>;
 pub struct Game {
     pub matrix: Matrix,
     pub piece: Piece,
-    piece_data: HashMap<char, PieceType>,
-    bag: Vec<char>,
+    piece_data: HashMap<String, PieceType>,
+    bag: Vec<String>,
 
     das: u128,
     arr: u128,
@@ -39,16 +39,16 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(matrix_width: usize, matrix_height: usize) -> Self {
+    pub fn new(matrix_width: usize, matrix_height: usize) -> Result<Self, String> {
         let matrix = vec![vec![PieceColor::Empty; matrix_width]; matrix_height];
-        let piece_data = load_piece_data();
+        let piece_data = load_piece_data()?;
 
         let mut bag = generate_bag(&piece_data);
         let first_piece = piece_data.get(&bag.pop().unwrap()).unwrap();
         let mut piece = Piece::new(first_piece.shape.clone(), first_piece.color);
         piece.update_ghost(&matrix);
 
-        Self {
+        Ok(Self {
             matrix,
             piece,
             piece_data,
@@ -59,7 +59,7 @@ impl Game {
             arr_leftover: 0,
             gravity: GRAVITY,
             gravity_timer: 0,
-        }
+        })
     }
 
     pub fn update(&mut self, input: &mut Input, elapsed: u128) {
@@ -120,7 +120,7 @@ impl Game {
         self.piece.update_ghost(&self.matrix);
     }
 
-    fn handle_piece_movement(&mut self, time_held: u128, elapsed: u128, direction: i32) {
+    fn handle_piece_movement(&mut self, time_held: u128, elapsed: u128, direction: i8) {
         if time_held == elapsed {
             self.piece.movement(&self.matrix, direction, 0);
             self.arr_leftover = 0;
@@ -139,9 +139,9 @@ impl Game {
     }
 }
 
-fn generate_bag(piece_list: &HashMap<char, PieceType>) -> Vec<char> {
+fn generate_bag(piece_list: &HashMap<String, PieceType>) -> Vec<String> {
     // Get all pieces from the list
-    let mut bag: Vec<char> = piece_list.keys().cloned().collect();
+    let mut bag: Vec<String> = piece_list.keys().cloned().collect();
 
     // Suffle the pieces
     let mut rng = rand::thread_rng();
