@@ -18,12 +18,37 @@ pub enum PieceColor {
     ColorCount
 }
 
-pub type PieceShape = [Vec<(i8, i8)>; 4];
-
-#[derive(Deserialize)]
-pub struct KickData {
-    pub data: [[Vec<(i8, i8)>; 3]; 4],
+pub enum MovementAction {
+    HardDrop,
+    Left,
+    Right,
+    None,
 }
+
+#[derive(Clone, Copy)]
+pub enum HDirection {
+    Left = -1,
+    None = 0,
+    Right = 1,
+}
+
+#[derive(Clone, Copy)]
+pub enum VDirection {
+    // Up = -1,
+    None = 0,
+    Down = 1,
+}
+
+#[derive(Clone, Copy)]
+pub enum RotationAction {
+    None,
+    RotateCW,
+    Rotate180,
+    RotateCCW,
+}
+
+pub type PieceShape = [Vec<(i8, i8)>; 4];
+pub type KickData = [[Vec<(i8, i8)>; 3]; 4];
 
 #[derive(Deserialize)]
 pub struct PieceType {
@@ -41,24 +66,23 @@ pub struct Piece {
     pub position: Position,
     shape: PieceShape,
     pub color: PieceColor,
-    kick_key: String,
+    kick_table: String,
     rotation: usize,
     pub ghost_position: i8,
 }
 
 impl Piece {
-    pub fn new(shape: PieceShape, color: PieceColor, kick_key: String) -> Self {
+    pub fn new(shape: PieceShape, color: PieceColor, kick_table: String) -> Self {
         Self {
             position: Position {row: 0, col: 3},
             shape,
             color,
-            kick_key,
+            kick_table,
             rotation: 0,
             ghost_position: 0,
         }
     }
 
-    /* A funtion that checks for collision given a rotation and a move direction */
     fn check_collision(&self, matrix: &Matrix, h_dir: i8, v_dir: i8, rotation: usize) -> bool {
         for (rel_row, rel_col) in self.shape[rotation].iter() {
             let row = (*rel_row + self.position.row + v_dir) as usize;
@@ -71,18 +95,18 @@ impl Piece {
         return false;
     }
 
-    pub fn movement(&mut self, matrix: &Matrix, h_dir: i8, v_dir: i8) -> bool {
-        if self.check_collision(matrix, h_dir, v_dir, self.rotation) {
+    pub fn movement(&mut self, matrix: &Matrix, h_dir: HDirection, v_dir: VDirection) -> bool {
+        if self.check_collision(matrix, h_dir as i8, v_dir as i8, self.rotation) {
             return false;
         }
-        self.position.row += v_dir;
-        self.position.col += h_dir;
+        self.position.row += v_dir as i8;
+        self.position.col += h_dir as i8;
         self.update_ghost(&matrix);
         true
     }
 
-    pub fn rotate(&mut self, matrix: &Matrix, kick_data: &HashMap<String, KickData>, rotation: usize) -> bool {
-        let target_rotation = (self.rotation + rotation) % 4;
+    pub fn rotate(&mut self, matrix: &Matrix, kick_data: &HashMap<String, KickData>, rotation: RotationAction) -> bool {
+        let target_rotation = (self.rotation + rotation as usize) % 4;
         if self.check_collision(matrix, 0, 0, target_rotation) {
             // Rotation causes a collision do wall kicks
             return self.wall_kick(matrix, kick_data, rotation);
@@ -92,28 +116,10 @@ impl Piece {
         true
     }
 
-    fn wall_kick(&mut self, matrix: &Matrix, kick_data: &HashMap<String, KickData>, rotation: usize) -> bool {
-        let target_rotation = (self.rotation + rotation) % 4;
-        
-        // let current_offsets = match self.rotation {
-        //     0 => vec![(0,0),(0,0),(0,0),(0,0),(0,0)],
-        //     1 => vec![(0,0),(1,0),(1,1),(0,-2),(1,-2)],
-        //     2 => vec![(0,0),(0,0),(0,0),(0,0),(0,0)],
-        //     3 => vec![(0,0),(-1,0),(-1,1),(0,-2),(-1,-2)],
-        //     _ => return false,
-        // };
+    fn wall_kick(&mut self, matrix: &Matrix, kick_data: &HashMap<String, KickData>, rotation: RotationAction) -> bool {
+        let target_rotation = (self.rotation + rotation as usize) % 4;
 
-        // let target_offsets = match target_rotation {
-        //     0 => vec![(0,0),(0,0),(0,0),(0,0),(0,0)],
-        //     1 => vec![(0,0),(1,0),(1,1),(0,-2),(1,-2)],
-        //     2 => vec![(0,0),(0,0),(0,0),(0,0),(0,0)],
-        //     3 => vec![(0,0),(-1,0),(-1,1),(0,-2),(-1,-2)],
-        //     _ => return false,
-        // };
-
-        // let kick_movements = current_offsets.iter().zip(target_offsets).map(|((a ,b), (c, d))| ((a-c), (b-d)));
-
-        let kick_movements = &kick_data.get(&self.kick_key).unwrap().data[self.rotation][rotation-1];
+        let kick_movements = &kick_data.get(&self.kick_table).unwrap()[self.rotation][rotation as usize-1];
 
         for (h, v) in kick_movements {
             if !self.check_collision(matrix, *h, *v, target_rotation) {

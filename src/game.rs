@@ -6,21 +6,7 @@ use rand::Rng;
 
 const DAS: u128 = 100;
 const ARR: u128 = 0;
-const GRAVITY: u128 = 25000;
-
-enum MovementAction {
-    HardDrop,
-    Left,
-    Right,
-    None,
-}
-
-enum RotationAction {
-    None,
-    RotateCW,
-    Rotate180,
-    RotateCCW,
-}
+const GRAVITY: u128 = 250;
 
 pub type Matrix = Vec<Vec<PieceColor>>;
 
@@ -43,6 +29,7 @@ impl Game {
         let matrix = vec![vec![PieceColor::Empty; matrix_width]; matrix_height];
         let piece_data = load_piece_data()?;
         let kick_data = load_kick_data()?;
+        validate_data(&piece_data, &kick_data)?;
 
         let mut bag = generate_bag(&piece_data);
         let first_piece = piece_data.get(&bag.pop().unwrap()).unwrap();
@@ -76,40 +63,34 @@ impl Game {
                 placed_piece = true;
             }
             MovementAction::Left => {
-                self.handle_piece_movement(input.left_held, elapsed, -1);
+                self.handle_piece_movement(input.left_held, elapsed, HDirection::Left);
             }
             MovementAction::Right => {
-                self.handle_piece_movement(input.right_held, elapsed, 1);
+                self.handle_piece_movement(input.right_held, elapsed, HDirection::Right);
             }
             _ => {}
         }
 
         match rotation_action {
-            RotationAction::RotateCW => {
+            RotationAction::None => {}
+            _ => {
                 input.rot_cw = false;
-                self.piece.rotate(&self.matrix, &self.kick_data, 1);
-            }
-            RotationAction::RotateCCW => {
-                input.rot_ccw = false;
-                self.piece.rotate(&self.matrix, &self.kick_data, 3);
-            }
-            RotationAction::Rotate180 => {
                 input.rot_180 = false;
-                self.piece.rotate(&self.matrix, &self.kick_data, 2);
+                input.rot_ccw = false;
+                self.piece.rotate(&self.matrix, &self.kick_data, rotation_action);
             }
-            _ => {}
         }
 
         if input.soft_drop {
-            gravity = 100;
-            self.gravity_timer = std::cmp::min(self.gravity_timer, 100);
+            gravity /= 4;
+            self.gravity_timer = std::cmp::min(self.gravity_timer, gravity);
         }
         self.gravity_timer += elapsed;
         while self.gravity_timer > gravity {
             self.gravity_timer -= gravity;
-            if !self.piece.movement(&self.matrix, 0, 1) {
-                // self.piece.lock(&mut self.matrix);
-                // placed_piece = true;
+            if !self.piece.movement(&self.matrix, HDirection::None, VDirection::Down) {
+                self.piece.lock(&mut self.matrix);
+                placed_piece = true;
                 break;
             }
         }
@@ -130,15 +111,15 @@ impl Game {
         self.piece.update_ghost(&self.matrix);
     }
 
-    fn handle_piece_movement(&mut self, time_held: u128, elapsed: u128, direction: i8) {
+    fn handle_piece_movement(&mut self, time_held: u128, elapsed: u128, direction: HDirection) {
         if time_held == elapsed {
-            self.piece.movement(&self.matrix, direction, 0);
+            self.piece.movement(&self.matrix, direction, VDirection::None);
             self.arr_leftover = 0;
         }
         if time_held > self.das {
             let mut time = elapsed + self.arr_leftover;
             while time > self.arr {
-                if !self.piece.movement(&self.matrix, direction, 0) {
+                if !self.piece.movement(&self.matrix, direction, VDirection::None) {
                     self.arr_leftover = 0;
                     break;
                 }
@@ -207,4 +188,20 @@ fn read_inputs(input: &Input) -> (MovementAction, RotationAction) {
         _ => RotationAction::None,
     };
     (movement_action, rotation_action)
+}
+
+fn validate_data(piece_data: &HashMap<String, PieceType>, wall_kick_data: &HashMap<String, KickData>) -> Result<(), String> {
+
+    for (piece_name, data) in piece_data.iter() {
+        match wall_kick_data.get(&data.kick_table) {
+            Some(_) => continue,
+            None => {
+                return Err(
+                    format!("Piece {} has kick table {} in piece_data.toml, but that table was not found in wall_kick_data.toml.", piece_name, data.kick_table)
+                );
+            }
+        }
+    }
+
+    Ok(())
 }
