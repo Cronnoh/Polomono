@@ -21,9 +21,15 @@ pub enum PieceColor {
 pub type PieceShape = [Vec<(i8, i8)>; 4];
 
 #[derive(Deserialize)]
+pub struct KickData {
+    pub data: [[Vec<(i8, i8)>; 3]; 4],
+}
+
+#[derive(Deserialize)]
 pub struct PieceType {
     pub shape: PieceShape,
     pub color: PieceColor,
+    pub kick_table: String,
 }
 
 pub struct Position {
@@ -35,16 +41,18 @@ pub struct Piece {
     pub position: Position,
     shape: PieceShape,
     pub color: PieceColor,
+    kick_key: String,
     rotation: usize,
     pub ghost_position: i8,
 }
 
 impl Piece {
-    pub fn new(shape: PieceShape, color: PieceColor) -> Self {
+    pub fn new(shape: PieceShape, color: PieceColor, kick_key: String) -> Self {
         Self {
             position: Position {row: 0, col: 3},
             shape,
             color,
+            kick_key,
             rotation: 0,
             ghost_position: 0,
         }
@@ -73,15 +81,50 @@ impl Piece {
         true
     }
 
-    pub fn rotate(&mut self, matrix: &Matrix, rotation: usize) -> bool {
+    pub fn rotate(&mut self, matrix: &Matrix, kick_data: &HashMap<String, KickData>, rotation: usize) -> bool {
         let target_rotation = (self.rotation + rotation) % 4;
         if self.check_collision(matrix, 0, 0, target_rotation) {
             // Rotation causes a collision do wall kicks
-            return false;
+            return self.wall_kick(matrix, kick_data, rotation);
         }
         self.rotation = target_rotation;
         self.update_ghost(&matrix);
         true
+    }
+
+    fn wall_kick(&mut self, matrix: &Matrix, kick_data: &HashMap<String, KickData>, rotation: usize) -> bool {
+        let target_rotation = (self.rotation + rotation) % 4;
+        
+        // let current_offsets = match self.rotation {
+        //     0 => vec![(0,0),(0,0),(0,0),(0,0),(0,0)],
+        //     1 => vec![(0,0),(1,0),(1,1),(0,-2),(1,-2)],
+        //     2 => vec![(0,0),(0,0),(0,0),(0,0),(0,0)],
+        //     3 => vec![(0,0),(-1,0),(-1,1),(0,-2),(-1,-2)],
+        //     _ => return false,
+        // };
+
+        // let target_offsets = match target_rotation {
+        //     0 => vec![(0,0),(0,0),(0,0),(0,0),(0,0)],
+        //     1 => vec![(0,0),(1,0),(1,1),(0,-2),(1,-2)],
+        //     2 => vec![(0,0),(0,0),(0,0),(0,0),(0,0)],
+        //     3 => vec![(0,0),(-1,0),(-1,1),(0,-2),(-1,-2)],
+        //     _ => return false,
+        // };
+
+        // let kick_movements = current_offsets.iter().zip(target_offsets).map(|((a ,b), (c, d))| ((a-c), (b-d)));
+
+        let kick_movements = &kick_data.get(&self.kick_key).unwrap().data[self.rotation][rotation-1];
+
+        for (h, v) in kick_movements {
+            if !self.check_collision(matrix, *h, *v, target_rotation) {
+                self.rotation = target_rotation;
+                self.position.row += *v;
+                self.position.col += *h;
+                self.update_ghost(&matrix);
+                return true;
+            }
+        }
+        false
     }
 
     pub fn hard_drop(&mut self, matrix: &mut Matrix) {
@@ -125,4 +168,12 @@ pub fn load_piece_data() -> Result<HashMap<String, PieceType>, String> {
     let piece_data = toml::from_str(&piece_data_file)
         .map_err(|e| format!("Error reading piece_data.toml: {}", e.to_string()))?;
     Ok(piece_data)
+}
+
+pub fn load_kick_data() -> Result<HashMap<String, KickData>, String> {
+    let kick_data_file = fs::read_to_string("wall_kick_data.toml")
+        .map_err(|e| format!("Error opening wall_kick_data.toml: {}", e.to_string()))?;
+    let kick_data = toml::from_str(&kick_data_file)
+        .map_err(|e| format!("Error reading wall_kick_data.toml: {}", e.to_string()))?;
+    Ok(kick_data)
 }

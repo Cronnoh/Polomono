@@ -6,7 +6,7 @@ use rand::Rng;
 
 const DAS: u128 = 100;
 const ARR: u128 = 0;
-const GRAVITY: u128 = 250;
+const GRAVITY: u128 = 25000;
 
 enum MovementAction {
     HardDrop,
@@ -28,6 +28,7 @@ pub struct Game {
     pub matrix: Matrix,
     pub piece: Piece,
     piece_data: HashMap<String, PieceType>,
+    kick_data: HashMap<String, KickData>,
     bag: Vec<String>,
 
     das: u128,
@@ -41,16 +42,18 @@ impl Game {
     pub fn new(matrix_width: usize, matrix_height: usize) -> Result<Self, String> {
         let matrix = vec![vec![PieceColor::Empty; matrix_width]; matrix_height];
         let piece_data = load_piece_data()?;
+        let kick_data = load_kick_data()?;
 
         let mut bag = generate_bag(&piece_data);
         let first_piece = piece_data.get(&bag.pop().unwrap()).unwrap();
-        let mut piece = Piece::new(first_piece.shape.clone(), first_piece.color);
+        let mut piece = Piece::new(first_piece.shape.clone(), first_piece.color, first_piece.kick_table.clone());
         piece.update_ghost(&matrix);
 
         Ok(Self {
             matrix,
             piece,
             piece_data,
+            kick_data,
             bag,
 
             das: DAS,
@@ -84,28 +87,29 @@ impl Game {
         match rotation_action {
             RotationAction::RotateCW => {
                 input.rot_cw = false;
-                self.piece.rotate(&self.matrix, 1);
+                self.piece.rotate(&self.matrix, &self.kick_data, 1);
             }
             RotationAction::RotateCCW => {
                 input.rot_ccw = false;
-                self.piece.rotate(&self.matrix, 3);
+                self.piece.rotate(&self.matrix, &self.kick_data, 3);
             }
             RotationAction::Rotate180 => {
                 input.rot_180 = false;
-                self.piece.rotate(&self.matrix, 2);
+                self.piece.rotate(&self.matrix, &self.kick_data, 2);
             }
             _ => {}
         }
 
         if input.soft_drop {
-            gravity /= 4;
+            gravity = 100;
+            self.gravity_timer = std::cmp::min(self.gravity_timer, 100);
         }
         self.gravity_timer += elapsed;
         while self.gravity_timer > gravity {
             self.gravity_timer -= gravity;
             if !self.piece.movement(&self.matrix, 0, 1) {
-                self.piece.lock(&mut self.matrix);
-                placed_piece = true;
+                // self.piece.lock(&mut self.matrix);
+                // placed_piece = true;
                 break;
             }
         }
@@ -122,7 +126,7 @@ impl Game {
             self.bag = generate_bag(&self.piece_data);
         }
         let new_piece = self.piece_data.get(&self.bag.pop().unwrap()).unwrap().clone();
-        self.piece = Piece::new(new_piece.shape.clone(), new_piece.color);
+        self.piece = Piece::new(new_piece.shape.clone(), new_piece.color, new_piece.kick_table.clone());
         self.piece.update_ghost(&self.matrix);
     }
 
