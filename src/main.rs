@@ -144,6 +144,20 @@ fn render(canvas: &mut WindowCanvas, texture: &mut Texture, regions: &Vec<Rect>,
         canvas.copy(&texture, regions[game.piece.color as usize], Rect::new(x, y, SCALE, SCALE))?;
     }
 
+    let preview_offset_x = 350;
+    let preview_offset_y = 100;
+    let preview_piece_seperation = 50;
+    let size = (SCALE/2) as i32;
+
+    for (i, piece) in game.get_preview_pieces().iter().rev().enumerate() {
+        let next_piece = game.piece_data.get(piece).unwrap();
+        for (row, col) in next_piece.shape[0].iter() {
+            let x = *col as i32 * size as i32 + preview_offset_x;
+            let y = *row as i32 * size as i32 + preview_piece_seperation * i as i32 + preview_offset_y;
+            canvas.copy(&texture, regions[next_piece.color as usize], Rect::new(x, y, size as u32, size as u32))?;
+        }
+    }
+
     canvas.present();
 
     Ok(())

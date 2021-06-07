@@ -1,0 +1,25 @@
+--piece preview (M)
+hold (E)
+lock delay (E)
+center matrix (E)
+
+configuration file (E)
+randomizer options (M)
+rebindable controls (M)
+controller support (M)
+
+timer (E)
+score (M)
+line counter (E)
+t-spin bonus (H)
+losing (M)
+
+convert pieces to [col, row] (B)
+ARS pieces/kicks (B)
+ARE, IRS, IHS (M)
+
+replay system (VH)
+game modes (H)
+high score list (H)
+sfx (H)
+title screen, options menu (H)

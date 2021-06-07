@@ -7,13 +7,14 @@ use rand::Rng;
 const DAS: u128 = 100;
 const ARR: u128 = 0;
 const GRAVITY: u128 = 250;
+const PREVIEWS: usize = 5;
 
 pub type Matrix = Vec<Vec<PieceColor>>;
 
 pub struct Game {
     pub matrix: Matrix,
     pub piece: Piece,
-    piece_data: HashMap<String, PieceType>,
+    pub piece_data: HashMap<String, PieceType>,
     kick_data: HashMap<String, KickData>,
     bag: Vec<String>,
 
@@ -32,9 +33,7 @@ impl Game {
         validate_data(&piece_data, &kick_data)?;
 
         let mut bag = generate_bag(&piece_data);
-        let first_piece = piece_data.get(&bag.pop().unwrap()).unwrap();
-        let mut piece = Piece::new(first_piece.shape.clone(), first_piece.color, first_piece.kick_table.clone());
-        piece.update_ghost(&matrix);
+        let piece = next_piece(&mut bag, &piece_data, &matrix);
 
         Ok(Self {
             matrix,
@@ -98,17 +97,8 @@ impl Game {
         if placed_piece {
             let remove = filled_rows(&mut self.matrix);
             remove_rows(&mut self.matrix, remove);
-            self.next_piece();
+            self.piece = next_piece(&mut self.bag, &self.piece_data, &self.matrix);
         }
-    }
-
-    fn next_piece(&mut self) {
-        if self.bag.is_empty() {
-            self.bag = generate_bag(&self.piece_data);
-        }
-        let new_piece = self.piece_data.get(&self.bag.pop().unwrap()).unwrap().clone();
-        self.piece = Piece::new(new_piece.shape.clone(), new_piece.color, new_piece.kick_table.clone());
-        self.piece.update_ghost(&self.matrix);
     }
 
     fn handle_piece_movement(&mut self, time_held: u128, elapsed: u128, direction: HDirection) {
@@ -128,11 +118,15 @@ impl Game {
             self.arr_leftover = time;
         }
     }
+
+    pub fn get_preview_pieces(&self) -> &[String] {
+        &self.bag[self.bag.len()-PREVIEWS..]
+    }
 }
 
-fn generate_bag(piece_list: &HashMap<String, PieceType>) -> Vec<String> {
+fn generate_bag(piece_data: &HashMap<String, PieceType>) -> Vec<String> {
     // Get all pieces from the list
-    let mut bag: Vec<String> = piece_list.keys().cloned().collect();
+    let mut bag: Vec<String> = piece_data.keys().cloned().collect();
 
     // Suffle the pieces
     let mut rng = rand::thread_rng();
@@ -141,6 +135,18 @@ fn generate_bag(piece_list: &HashMap<String, PieceType>) -> Vec<String> {
         bag.swap(i, rng.gen_range(i..len));
     }
     bag
+}
+
+fn next_piece(bag: &mut Vec<String>, piece_data: &HashMap<String, PieceType>, matrix: &Matrix) -> Piece {
+    while bag.len() <= PREVIEWS {
+        let mut new_bag = generate_bag(&piece_data);
+        new_bag.append(bag);
+        *bag = new_bag;
+    }
+    let new_piece = piece_data.get(&bag.pop().unwrap()).unwrap();
+    let mut piece = Piece::new(new_piece.shape.clone(), new_piece.color, new_piece.kick_table.clone());
+    piece.update_ghost(&matrix);
+    piece
 }
 
 fn filled_rows(matrix: &mut Matrix) -> Vec<usize> {
@@ -191,7 +197,6 @@ fn read_inputs(input: &Input) -> (MovementAction, RotationAction) {
 }
 
 fn validate_data(piece_data: &HashMap<String, PieceType>, wall_kick_data: &HashMap<String, KickData>) -> Result<(), String> {
-
     for (piece_name, data) in piece_data.iter() {
         match wall_kick_data.get(&data.kick_table) {
             Some(_) => continue,
@@ -202,6 +207,5 @@ fn validate_data(piece_data: &HashMap<String, PieceType>, wall_kick_data: &HashM
             }
         }
     }
-
     Ok(())
 }
