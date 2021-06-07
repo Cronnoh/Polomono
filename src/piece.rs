@@ -170,6 +170,12 @@ impl Piece {
     pub fn is_grounded(&self, matrix: &Matrix) -> bool {
         self.check_collision(matrix, 0, 1, self.rotation)
     }
+
+    pub fn reset_position(&mut self) {
+        self.position.col = 3;
+        self.position.row = 0;
+        self.rotation = 0;
+    }
 }
 
 pub fn load_piece_data() -> Result<HashMap<String, PieceType>, String> {

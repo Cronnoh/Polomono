@@ -15,6 +15,7 @@ pub type Matrix = Vec<Vec<PieceColor>>;
 pub struct Game {
     pub matrix: Matrix,
     pub piece: Piece,
+    pub held: Option<Piece>,
     pub piece_data: HashMap<String, PieceType>,
     kick_data: HashMap<String, KickData>,
     bag: Vec<String>,
@@ -25,6 +26,7 @@ pub struct Game {
     gravity: u128,
     gravity_timer: u128,
     lock_timer: u128,
+    can_hold: bool,
 }
 
 impl Game {
@@ -40,6 +42,7 @@ impl Game {
         Ok(Self {
             matrix,
             piece,
+            held: None,
             piece_data,
             kick_data,
             bag,
@@ -50,6 +53,7 @@ impl Game {
             gravity: GRAVITY,
             gravity_timer: 0,
             lock_timer: 0,
+            can_hold: true,
         })
     }
 
@@ -95,6 +99,14 @@ impl Game {
             }
         }
 
+        if input.hold {
+            input.hold = false;
+            if self.can_hold {
+                self.can_hold = false;
+                self.hold_piece();
+            }
+        }
+
         if self.piece.is_grounded(&self.matrix) {
             self.lock_timer += elapsed;
             if self.lock_timer >= LOCK_DELAY {
@@ -105,9 +117,9 @@ impl Game {
             self.lock_timer = 0;
         }
 
-
         if placed_piece {
             self.lock_timer = 0;
+            self.can_hold = true;
             let remove = filled_rows(&mut self.matrix);
             remove_rows(&mut self.matrix, remove);
             self.piece = next_piece(&mut self.bag, &self.piece_data, &self.matrix);
@@ -134,6 +146,20 @@ impl Game {
 
     pub fn get_preview_pieces(&self) -> &[String] {
         &self.bag[self.bag.len()-PREVIEWS..]
+    }
+
+    fn hold_piece(&mut self) {
+        match &mut self.held {
+            Some(held) => {
+                std::mem::swap(&mut self.piece, held);
+            }
+            None => {
+                let next = next_piece(&mut self.bag, &self.piece_data, &self.matrix);
+                self.held = Some(std::mem::replace(&mut self.piece, next));
+            }
+        }
+        self.piece.reset_position();
+        self.piece.update_ghost(&self.matrix);
     }
 }
 

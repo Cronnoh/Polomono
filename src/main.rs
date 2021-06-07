@@ -48,6 +48,7 @@ fn main() -> Result<(), String> {
         rot_cw: false,
         rot_ccw: false,
         rot_180: false,
+        hold: false,
     };
     
     let mut game = game::Game::new(MATRIX_WIDTH, MATRIX_HEIGHT)?;
@@ -155,6 +156,14 @@ fn render(canvas: &mut WindowCanvas, texture: &mut Texture, regions: &Vec<Rect>,
             let x = *col as i32 * size as i32 + preview_offset_x;
             let y = *row as i32 * size as i32 + preview_piece_seperation * i as i32 + preview_offset_y;
             canvas.copy(&texture, regions[next_piece.color as usize], Rect::new(x, y, size as u32, size as u32))?;
+        }
+    }
+
+    if let Some(held) = &game.held {
+        for (row, col) in held.get_orientation().iter() {
+            let x = *col as i32 * size as i32 + preview_offset_x;
+            let y = *row as i32 * size as i32 + preview_offset_y + 500;
+            canvas.copy(&texture, regions[held.color as usize], Rect::new(x, y, size as u32, size as u32))?;
         }
     }
 

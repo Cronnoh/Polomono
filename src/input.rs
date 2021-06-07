@@ -11,6 +11,7 @@ pub struct Input {
     pub rot_cw: bool,
     pub rot_ccw: bool,
     pub rot_180: bool,
+    pub hold: bool,
 }
 
 pub fn handle_input_event(input: &mut Input, event: Event) {
@@ -60,6 +61,12 @@ pub fn handle_input_event(input: &mut Input, event: Event) {
         }
         Event::KeyUp { scancode: Some(Scancode::L), repeat: false, .. } => {
             input.rot_cw = false;
+        }
+        Event::KeyDown { scancode: Some(Scancode::LShift), repeat: false, .. } => {
+            input.hold = true;
+        }
+        Event::KeyUp { scancode: Some(Scancode::LShift), repeat: false, .. } => {
+            input.hold = false;
         }
         _ => {}
     }

@@ -1,5 +1,5 @@
 --piece preview (M)
-hold (E)
+--hold (E)
 --lock delay (E)
 center matrix (E)
 
