@@ -7,6 +7,7 @@ use rand::Rng;
 const DAS: u128 = 100;
 const ARR: u128 = 0;
 const GRAVITY: u128 = 250;
+const LOCK_DELAY: u128 = 500;
 const PREVIEWS: usize = 5;
 
 pub type Matrix = Vec<Vec<PieceColor>>;
@@ -23,6 +24,7 @@ pub struct Game {
     arr_leftover: u128,
     gravity: u128,
     gravity_timer: u128,
+    lock_timer: u128,
 }
 
 impl Game {
@@ -47,6 +49,7 @@ impl Game {
             arr_leftover: 0,
             gravity: GRAVITY,
             gravity_timer: 0,
+            lock_timer: 0,
         })
     }
 
@@ -88,13 +91,23 @@ impl Game {
         while self.gravity_timer > gravity {
             self.gravity_timer -= gravity;
             if !self.piece.movement(&self.matrix, HDirection::None, VDirection::Down) {
-                self.piece.lock(&mut self.matrix);
-                placed_piece = true;
                 break;
             }
         }
 
+        if self.piece.is_grounded(&self.matrix) {
+            self.lock_timer += elapsed;
+            if self.lock_timer >= LOCK_DELAY {
+                self.piece.lock(&mut self.matrix);
+                placed_piece = true;
+            }
+        } else {
+            self.lock_timer = 0;
+        }
+
+
         if placed_piece {
+            self.lock_timer = 0;
             let remove = filled_rows(&mut self.matrix);
             remove_rows(&mut self.matrix, remove);
             self.piece = next_piece(&mut self.bag, &self.piece_data, &self.matrix);

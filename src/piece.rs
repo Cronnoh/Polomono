@@ -166,6 +166,10 @@ impl Piece {
         }
         self.ghost_position = self.position.row + min_fall_distance as i8 - 1;
     }
+
+    pub fn is_grounded(&self, matrix: &Matrix) -> bool {
+        self.check_collision(matrix, 0, 1, self.rotation)
+    }
 }
 
 pub fn load_piece_data() -> Result<HashMap<String, PieceType>, String> {

@@ -1,6 +1,6 @@
 --piece preview (M)
 hold (E)
-lock delay (E)
+--lock delay (E)
 center matrix (E)
 
 configuration file (E)
@@ -12,6 +12,7 @@ timer (E)
 score (M)
 line counter (E)
 t-spin bonus (H)
+combos (M)
 losing (M)
 
 convert pieces to [col, row] (B)
