@@ -13,4 +13,4 @@ toml = "0.5.8"
 
 [dependencies.sdl2]
 version = "0.34.5"
-features = ["image"]
+features = ["image", "ttf"]

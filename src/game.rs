@@ -4,10 +4,10 @@ use std::collections::HashMap;
 
 use rand::Rng;
 
-const DAS: u128 = 100;
+const DAS: u128 = 100000;
 const ARR: u128 = 0;
-const GRAVITY: u128 = 250;
-const LOCK_DELAY: u128 = 500;
+const GRAVITY: u128 = 250000;
+const LOCK_DELAY: u128 = 500000;
 const PREVIEWS: usize = 5;
 
 pub type Matrix = Vec<Vec<PieceColor>>;
@@ -27,6 +27,7 @@ pub struct Game {
     gravity_timer: u128,
     lock_timer: u128,
     can_hold: bool,
+    pub time: u128,
 }
 
 impl Game {
@@ -54,10 +55,13 @@ impl Game {
             gravity_timer: 0,
             lock_timer: 0,
             can_hold: true,
+            time: 0,
         })
     }
 
     pub fn update(&mut self, input: &mut Input, elapsed: u128) {
+        self.time += elapsed;
+        // println!(self.time);
         let (movement_action, rotation_action) = read_inputs(&input);
         let mut placed_piece = false;
         let mut gravity = self.gravity;

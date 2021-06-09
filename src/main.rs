@@ -7,11 +7,12 @@ use std::time::Instant;
 
 use sdl2::{
     rect::Rect,
-    render::{WindowCanvas, Texture, BlendMode},
+    render::{WindowCanvas, Texture, BlendMode, TextureCreator},
     pixels::Color,
     event::Event,
     keyboard::Scancode,
     image::{InitFlag, LoadTexture},
+    ttf::{Font}
 };
 
 const MATRIX_WIDTH: usize = 10;
@@ -22,6 +23,8 @@ fn main() -> Result<(), String> {
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
     let _image_context = sdl2::image::init(InitFlag::PNG)?;
+    let ttf_context = sdl2::ttf::init()
+        .map_err(|e| e.to_string())?;
 
     let window = video_subsystem
         .window("idk", 1184, 666)
@@ -37,6 +40,8 @@ fn main() -> Result<(), String> {
     let mut blocks_texture = texture_creator.load_texture("assets/tet.png")?;
     blocks_texture.set_blend_mode(BlendMode::Blend);
     let blocks_regions = block_texture_regions(&blocks_texture)?;
+
+    let font = ttf_context.load_font("assets/Hack-Bold.ttf", 48)?;
 
     let mut input = input::Input {
         hard_drop: false,
@@ -55,7 +60,7 @@ fn main() -> Result<(), String> {
     let mut current_time = Instant::now();
     let mut event_pump = sdl_context.event_pump()?;
     'running: loop {
-        let elapsed = current_time.elapsed().as_millis();
+        let elapsed = current_time.elapsed().as_micros();
         current_time = Instant::now();
 
         for event in event_pump.poll_iter() {
@@ -78,8 +83,8 @@ fn main() -> Result<(), String> {
 
         game.update(&mut input, elapsed);
 
-        render(&mut canvas, &mut blocks_texture, &blocks_regions, &game)?;
-
+        let mut time_texture = create_time_texture(game.time, &font, &texture_creator)?;
+        render(&mut canvas, &mut blocks_texture, &blocks_regions, &mut time_texture, &game)?;
     }
 
     Ok(())
@@ -100,7 +105,7 @@ fn block_texture_regions(texture: &Texture) -> Result<Vec<Rect>, String> {
     Ok(regions)
 }
 
-fn render(canvas: &mut WindowCanvas, texture: &mut Texture, regions: &Vec<Rect>, game: &game::Game) -> Result<(), String> {
+fn render(canvas: &mut WindowCanvas, texture: &mut Texture, regions: &Vec<Rect>, time_texture: &mut Texture, game: &game::Game) -> Result<(), String> {
     canvas.set_draw_color(Color::RGB(64, 64, 64));
     canvas.clear();
 
@@ -167,7 +172,34 @@ fn render(canvas: &mut WindowCanvas, texture: &mut Texture, regions: &Vec<Rect>,
         }
     }
 
+    let query = time_texture.query();
+    time_texture.set_color_mod(96, 96, 96);
+    canvas.copy(&time_texture, None, Rect::new(452, 452, query.width, query.height))?;
+    time_texture.set_color_mod(255, 255, 255);
+    canvas.copy(&time_texture, None, Rect::new(450, 450, query.width, query.height))?;
+
     canvas.present();
 
     Ok(())
+}
+
+fn format_time(microseconds: u128) -> String {
+    let hundredths = (microseconds % 1000000) / 10000;
+    let total_seconds = microseconds / 1000000;
+    let seconds = total_seconds % 60;
+    let minutes = total_seconds / 60;
+
+    format!("{:>0width$}:{:>0width$}.{:>0width$}", minutes, seconds, hundredths, width=2)
+}
+
+fn create_time_texture<'a, T>(time: u128, font: &Font, texture_creator: &'a TextureCreator<T>) -> Result<Texture<'a>, String> {
+    let font_surface = font
+        .render(&format_time(time))
+        .blended(Color::RGB(255, 255, 255))
+        .map_err(|e| e.to_string())?;
+    let font_texture = texture_creator
+        .create_texture_from_surface(&font_surface)
+        .map_err(|e| e.to_string())?;
+
+    Ok(font_texture)
 }
