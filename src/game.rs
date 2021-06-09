@@ -61,7 +61,6 @@ impl Game {
 
     pub fn update(&mut self, input: &mut Input, elapsed: u128) {
         self.time += elapsed;
-        // println!(self.time);
         let (movement_action, rotation_action) = read_inputs(&input);
         let mut placed_piece = false;
         let mut gravity = self.gravity;
@@ -153,6 +152,7 @@ impl Game {
     }
 
     fn hold_piece(&mut self) {
+        self.piece.reset_position();
         match &mut self.held {
             Some(held) => {
                 std::mem::swap(&mut self.piece, held);
@@ -162,7 +162,9 @@ impl Game {
                 self.held = Some(std::mem::replace(&mut self.piece, next));
             }
         }
-        self.piece.reset_position();
+        self.arr_leftover = 0;
+        self.gravity_timer = 0;
+        self.lock_timer = 0;
         self.piece.update_ghost(&self.matrix);
     }
 }
