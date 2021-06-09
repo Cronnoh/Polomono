@@ -83,8 +83,8 @@ fn main() -> Result<(), String> {
 
         game.update(&mut input, elapsed);
 
-        let mut time_texture = create_time_texture(game.time, &font, &texture_creator)?;
-        render(&mut canvas, &mut blocks_texture, &blocks_regions, &mut time_texture, &game)?;
+        let mut stat_textures = create_stat_textures(&game.stats, &font, &texture_creator)?;
+        render(&mut canvas, &mut blocks_texture, &blocks_regions, &mut stat_textures, &game)?;
     }
 
     Ok(())
@@ -105,7 +105,7 @@ fn block_texture_regions(texture: &Texture) -> Result<Vec<Rect>, String> {
     Ok(regions)
 }
 
-fn render(canvas: &mut WindowCanvas, texture: &mut Texture, regions: &Vec<Rect>, time_texture: &mut Texture, game: &game::Game) -> Result<(), String> {
+fn render(canvas: &mut WindowCanvas, texture: &mut Texture, regions: &Vec<Rect>, stat_textures: &mut Vec<Texture>, game: &game::Game) -> Result<(), String> {
     canvas.set_draw_color(Color::RGB(64, 64, 64));
     canvas.clear();
 
@@ -172,11 +172,16 @@ fn render(canvas: &mut WindowCanvas, texture: &mut Texture, regions: &Vec<Rect>,
         }
     }
 
-    let query = time_texture.query();
-    time_texture.set_color_mod(96, 96, 96);
-    canvas.copy(&time_texture, None, Rect::new(452, 452, query.width, query.height))?;
-    time_texture.set_color_mod(255, 255, 255);
-    canvas.copy(&time_texture, None, Rect::new(450, 450, query.width, query.height))?;
+    let vertical_stat_spacing = 60;
+    for (i, texture) in stat_textures.iter_mut().enumerate() {
+        let query = texture.query();
+        let pos_x = 500;
+        let pos_y = 300 + vertical_stat_spacing * i as i32;
+        texture.set_color_mod(96, 96, 96);
+        canvas.copy(&texture, None, Rect::new(pos_x+2, pos_y+2, query.width, query.height))?;
+        texture.set_color_mod(255, 255, 255);
+        canvas.copy(&texture, None, Rect::new(pos_x, pos_y, query.width, query.height))?;
+    }
 
     canvas.present();
 
@@ -192,14 +197,31 @@ fn format_time(microseconds: u128) -> String {
     format!("{:>0width$}:{:>0width$}.{:>0width$}", minutes, seconds, hundredths, width=2)
 }
 
-fn create_time_texture<'a, T>(time: u128, font: &Font, texture_creator: &'a TextureCreator<T>) -> Result<Texture<'a>, String> {
-    let font_surface = font
-        .render(&format_time(time))
+fn create_stat_textures<'a, T>(stats: &game::Stats, font: &Font, texture_creator: &'a TextureCreator<T>) -> Result<Vec<Texture<'a>>, String> {
+    let mut textures = Vec::new();
+    let time_surface = font
+        .render(&format_time(stats.time))
         .blended(Color::RGB(255, 255, 255))
         .map_err(|e| e.to_string())?;
-    let font_texture = texture_creator
-        .create_texture_from_surface(&font_surface)
-        .map_err(|e| e.to_string())?;
+    textures.push(texture_creator
+        .create_texture_from_surface(&time_surface)
+        .map_err(|e| e.to_string())?);
 
-    Ok(font_texture)
+    let lines_cleared_surface = font
+        .render(&stats.lines_cleared.to_string())
+        .blended(Color::RGB(255, 255, 255))
+        .map_err(|e| e.to_string())?;
+    textures.push(texture_creator
+        .create_texture_from_surface(&lines_cleared_surface)
+        .map_err(|e| e.to_string())?);
+
+    let pieces_placed_surface = font
+        .render(&stats.pieces_placed.to_string())
+        .blended(Color::RGB(255, 255, 255))
+        .map_err(|e| e.to_string())?;
+    textures.push(texture_creator
+        .create_texture_from_surface(&pieces_placed_surface)
+        .map_err(|e| e.to_string())?);        
+
+    Ok(textures)
 }

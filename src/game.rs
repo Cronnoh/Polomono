@@ -12,6 +12,13 @@ const PREVIEWS: usize = 5;
 
 pub type Matrix = Vec<Vec<PieceColor>>;
 
+pub struct Stats {
+    pub score: u32,
+    pub time: u128,
+    pub lines_cleared: u32,
+    pub pieces_placed: u32,
+}
+
 pub struct Game {
     pub matrix: Matrix,
     pub piece: Piece,
@@ -27,7 +34,7 @@ pub struct Game {
     gravity_timer: u128,
     lock_timer: u128,
     can_hold: bool,
-    pub time: u128,
+    pub stats: Stats,
 }
 
 impl Game {
@@ -39,6 +46,13 @@ impl Game {
 
         let mut bag = generate_bag(&piece_data);
         let piece = next_piece(&mut bag, &piece_data, &matrix);
+
+        let stats = Stats {
+            score: 0,
+            time: 0,
+            lines_cleared: 0,
+            pieces_placed: 0,
+        };
 
         Ok(Self {
             matrix,
@@ -55,12 +69,12 @@ impl Game {
             gravity_timer: 0,
             lock_timer: 0,
             can_hold: true,
-            time: 0,
+            stats,
         })
     }
 
     pub fn update(&mut self, input: &mut Input, elapsed: u128) {
-        self.time += elapsed;
+        self.stats.time += elapsed;
         let (movement_action, rotation_action) = read_inputs(&input);
         let mut placed_piece = false;
         let mut gravity = self.gravity;
@@ -125,7 +139,9 @@ impl Game {
             self.gravity_timer = 0;
             self.arr_leftover = 0;
             self.can_hold = true;
+            self.stats.pieces_placed += 1;
             let remove = filled_rows(&mut self.matrix);
+            self.stats.lines_cleared += remove.len() as u32;
             remove_rows(&mut self.matrix, remove);
             self.piece = next_piece(&mut self.bag, &self.piece_data, &self.matrix);
         }
