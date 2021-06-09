@@ -122,6 +122,8 @@ impl Game {
 
         if placed_piece {
             self.lock_timer = 0;
+            self.gravity_timer = 0;
+            self.arr_leftover = 0;
             self.can_hold = true;
             let remove = filled_rows(&mut self.matrix);
             remove_rows(&mut self.matrix, remove);
