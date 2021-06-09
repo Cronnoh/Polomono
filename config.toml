@@ -1,0 +1,9 @@
+[config]
+Matrix_Height = 20
+Matrix_Width = 10
+
+DAS = 100
+ARR = 0
+Gravity = 250
+Lock_Delay = 500
+Preview_Count = 5

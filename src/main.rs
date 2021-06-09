@@ -20,6 +20,17 @@ const MATRIX_HEIGHT: usize = 20;
 const OFFSCREEN_ROWS: usize = 5;
 const SCALE: u32 = 32;
 
+struct Config {
+    matrix_height: usize,
+    matrix_width: usize,
+
+    das: u128,
+    arr: u128,
+    gravity: u128,
+    lock_delay: u128,
+    preview_count: usize,
+}
+
 fn main() -> Result<(), String> {
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
@@ -43,6 +54,11 @@ fn main() -> Result<(), String> {
     let blocks_regions = block_texture_regions(&blocks_texture)?;
 
     let font = ttf_context.load_font("assets/Hack-Bold.ttf", 48)?;
+
+    let config_file = std::fs::read_to_string("config.toml")
+        .map_err(|e| format!("Error opening config.toml: {}", e.to_string()))?;
+    let config = toml::from_str(&config_file)
+        .map_err(|e| format!("Error reading config.toml: {}", e.to_string()))?;
 
     let mut input = input::Input {
         hard_drop: false,
