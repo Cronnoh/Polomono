@@ -244,7 +244,9 @@ fn remove_rows(matrix: &mut Matrix, remove: Vec<usize>) {
 
 fn read_inputs(input: &Input) -> (MovementAction, RotationAction) {
     let movement_action = match (input.hard_drop, input.left, input.right) {
-        (true, _, _) => MovementAction::HardDrop,
+        (true, _, _) =>  {
+            return (MovementAction::HardDrop, RotationAction::None);
+        }
         (_, true, false) => MovementAction::Left,
         (_, false, true) => MovementAction::Right,
         _ => MovementAction::None,
