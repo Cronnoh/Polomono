@@ -55,6 +55,7 @@ pub struct PieceType {
     pub shape: PieceShape,
     pub color: PieceColor,
     pub kick_table: String,
+    pub spin_bonus: bool,
 }
 
 pub struct Position {
@@ -69,10 +70,12 @@ pub struct Piece {
     kick_table: String,
     rotation: usize,
     pub ghost_position: i8,
+    spin_bonus: bool,
+    last_move_was_rotation: bool,
 }
 
 impl Piece {
-    pub fn new(shape: PieceShape, color: PieceColor, kick_table: String) -> Self {
+    pub fn new(shape: PieceShape, color: PieceColor, kick_table: String, spin_bonus: bool) -> Self {
         Self {
             position: Position {row: 0, col: 3},
             shape,
@@ -80,9 +83,14 @@ impl Piece {
             kick_table,
             rotation: 0,
             ghost_position: 0,
+            spin_bonus,
+            last_move_was_rotation: false,
         }
     }
 
+    /* Check if the given movement and rotation would cause a collision.
+        Returns true is a collision would occur and false otherwise.
+    */
     fn check_collision(&self, matrix: &Matrix, h_dir: i8, v_dir: i8, rotation: usize) -> bool {
         for (rel_row, rel_col) in self.shape[rotation].iter() {
             let row = (*rel_row + self.position.row + v_dir) as usize;
@@ -92,7 +100,7 @@ impl Piece {
                 return true;
             }
         }
-        return false;
+        false
     }
 
     pub fn movement(&mut self, matrix: &Matrix, h_dir: HDirection, v_dir: VDirection) -> bool {
@@ -102,6 +110,12 @@ impl Piece {
         self.position.row += v_dir as i8;
         self.position.col += h_dir as i8;
         self.update_ghost(&matrix);
+        match h_dir {
+            HDirection::Left | HDirection::Right => {
+                self.last_move_was_rotation = false;
+            }
+            _ => {}
+        }
         true
     }
 
@@ -113,6 +127,7 @@ impl Piece {
         }
         self.rotation = target_rotation;
         self.update_ghost(&matrix);
+        self.last_move_was_rotation = true;
         true
     }
 
@@ -127,15 +142,15 @@ impl Piece {
                 self.position.row += *v;
                 self.position.col += *h;
                 self.update_ghost(&matrix);
+                self.last_move_was_rotation = true;
                 return true;
             }
         }
         false
     }
 
-    pub fn hard_drop(&mut self, matrix: &mut Matrix) {
+    pub fn hard_drop(&mut self) {
         self.position.row = self.ghost_position;
-        self.lock(matrix);
     }
 
     pub fn get_orientation(&self) -> &Vec<(i8, i8)> {
@@ -175,6 +190,16 @@ impl Piece {
         self.position.col = 3;
         self.position.row = 0;
         self.rotation = 0;
+    }
+
+    pub fn check_bonus(&self, matrix: &Matrix) -> bool {
+        if !self.spin_bonus || !self.last_move_was_rotation {
+            return false;
+        }
+        let collides_up = self.check_collision(matrix, 0, -1, self.rotation);
+        let collides_left = self.check_collision(matrix, -1, 0, self.rotation);
+        let collides_right = self.check_collision(matrix, 1, 0, self.rotation);
+        collides_up && collides_left && collides_right
     }
 }
 

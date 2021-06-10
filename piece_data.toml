@@ -21,6 +21,7 @@ shape = [
 ]
 color = "Cyan"
 kick_table = "SRS_I"
+spin_bonus = false
 
 [T]
 shape = [
@@ -31,6 +32,7 @@ shape = [
 ]
 color = "Magenta"
 kick_table = "SRS"
+spin_bonus = true
 
 [O]
 shape = [
@@ -41,6 +43,7 @@ shape = [
 ]
 color = "Yellow"
 kick_table = "SRS"
+spin_bonus = false
 
 [J]
 shape = [
@@ -51,6 +54,7 @@ shape = [
 ]
 color = "Blue"
 kick_table = "SRS"
+spin_bonus = false
 
 [L]
 shape = [
@@ -61,6 +65,7 @@ shape = [
 ]
 color = "Orange"
 kick_table = "SRS"
+spin_bonus = false
 
 [S]
 shape = [
@@ -71,6 +76,7 @@ shape = [
 ]
 color = "Green"
 kick_table = "SRS"
+spin_bonus = false
 
 [Z]
 shape = [
@@ -81,6 +87,7 @@ shape = [
 ]
 color = "Red"
 kick_table = "SRS"
+spin_bonus = false
 
 [2]
 shape = [
@@ -91,6 +98,7 @@ shape = [
 ]
 color = "Gray"
 kick_table = "SRS"
+spin_bonus = false
 
 [X]
 shape = [
@@ -101,3 +109,4 @@ shape = [
 ]
 color = "Gray"
 kick_table = "SRS_I"
+spin_bonus = false

@@ -82,7 +82,7 @@ impl Game {
         match movement_action {
             MovementAction::HardDrop => {
                 input.hard_drop = false;
-                self.piece.hard_drop(&mut self.matrix);
+                self.piece.hard_drop();
                 placed_piece = true;
             }
             MovementAction::Left => {
@@ -127,7 +127,6 @@ impl Game {
         if self.piece.is_grounded(&self.matrix) {
             self.lock_timer += elapsed;
             if self.lock_timer >= LOCK_DELAY {
-                self.piece.lock(&mut self.matrix);
                 placed_piece = true;
             }
         } else {
@@ -135,14 +134,18 @@ impl Game {
         }
 
         if placed_piece {
+            let _bonus = self.piece.check_bonus(&self.matrix);
+            self.piece.lock(&mut self.matrix);
             self.lock_timer = 0;
             self.gravity_timer = 0;
             self.arr_leftover = 0;
             self.can_hold = true;
             self.stats.pieces_placed += 1;
             let remove = filled_rows(&mut self.matrix);
-            self.stats.lines_cleared += remove.len() as u32;
-            remove_rows(&mut self.matrix, remove);
+            if remove.len() > 0 {
+                self.stats.lines_cleared += remove.len() as u32;
+                remove_rows(&mut self.matrix, remove);
+            }
             self.piece = next_piece(&mut self.bag, &self.piece_data, &self.matrix);
         }
     }
@@ -207,7 +210,7 @@ fn next_piece(bag: &mut Vec<String>, piece_data: &HashMap<String, PieceType>, ma
         *bag = new_bag;
     }
     let new_piece = piece_data.get(&bag.pop().unwrap()).unwrap();
-    let mut piece = Piece::new(new_piece.shape.clone(), new_piece.color, new_piece.kick_table.clone());
+    let mut piece = Piece::new(new_piece.shape.clone(), new_piece.color, new_piece.kick_table.clone(), new_piece.spin_bonus);
     piece.update_ghost(&matrix);
     piece
 }
