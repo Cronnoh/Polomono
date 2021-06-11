@@ -17,6 +17,7 @@ use sdl2::{
 
 const MATRIX_WIDTH: usize = 10;
 const MATRIX_HEIGHT: usize = 20;
+const OFFSCREEN_ROWS: usize = 5;
 const SCALE: u32 = 32;
 
 fn main() -> Result<(), String> {
@@ -56,7 +57,7 @@ fn main() -> Result<(), String> {
         hold: false,
     };
     
-    let mut game = game::Game::new(MATRIX_WIDTH, MATRIX_HEIGHT)?;
+    let mut game = game::Game::new(MATRIX_WIDTH, MATRIX_HEIGHT+OFFSCREEN_ROWS)?;
     let mut current_time = Instant::now();
     let mut event_pump = sdl_context.event_pump()?;
     'running: loop {
@@ -70,7 +71,7 @@ fn main() -> Result<(), String> {
                     break 'running;
                 }
                 Event::KeyDown { scancode: Some(Scancode::R), repeat: false, ..} => {
-                    game = game::Game::new(MATRIX_WIDTH, MATRIX_HEIGHT)?;
+                    game = game::Game::new(MATRIX_WIDTH, MATRIX_HEIGHT+OFFSCREEN_ROWS)?;
                 }
                 Event::KeyDown{..} | Event::KeyUp{..} => {
                     input::handle_input_event(&mut input, event);
@@ -113,10 +114,10 @@ fn render(canvas: &mut WindowCanvas, texture: &mut Texture, regions: &Vec<Rect>,
     // let canvas_center = Point::new(width as i32 / 2, height as i32 / 2);
 
     texture.set_alpha_mod(255);
-    for (i, row) in game.matrix.iter().enumerate() {
+    for (i, row) in game.matrix.iter().enumerate().skip(OFFSCREEN_ROWS) {
         for (j, color) in row.iter().enumerate() {
             let x = (j as u32 * SCALE) as i32;
-            let y = (i as u32 * SCALE) as i32;
+            let y = ((i as u32 - OFFSCREEN_ROWS as u32)* SCALE) as i32;
             canvas.copy(&texture, regions[*color as usize], Rect::new(x, y, SCALE, SCALE))?;
         }
     }
@@ -130,7 +131,7 @@ fn render(canvas: &mut WindowCanvas, texture: &mut Texture, regions: &Vec<Rect>,
     canvas.set_draw_color(Color::RGB(255, 255, 255));
     for (row, col) in game.piece.get_orientation().iter() {
         let ghost_x = (*col + game.piece.position.col) as i32 * SCALE as i32;
-        let ghost_y = (*row + game.piece.ghost_position) as i32 * SCALE as i32;
+        let ghost_y = ((*row + game.piece.ghost_position) as i32 - OFFSCREEN_ROWS as i32) * SCALE as i32;
         canvas.fill_rect(Rect::new(ghost_x-2, ghost_y-2, SCALE+4, SCALE+4))?;
     }
 
@@ -138,7 +139,7 @@ fn render(canvas: &mut WindowCanvas, texture: &mut Texture, regions: &Vec<Rect>,
     texture.set_alpha_mod(192);
     for (row, col) in game.piece.get_orientation().iter() {
         let ghost_x = (*col + game.piece.position.col) as i32 * SCALE as i32;
-        let ghost_y = (*row + game.piece.ghost_position) as i32 * SCALE as i32;
+        let ghost_y = ((*row + game.piece.ghost_position) as i32 - OFFSCREEN_ROWS as i32) * SCALE as i32;
         canvas.copy(&texture, regions[game.piece.color as usize], Rect::new(ghost_x, ghost_y, SCALE, SCALE))?;
     }
 
@@ -146,7 +147,7 @@ fn render(canvas: &mut WindowCanvas, texture: &mut Texture, regions: &Vec<Rect>,
     texture.set_alpha_mod(255);
     for (row, col) in game.piece.get_orientation().iter() {
         let x = (*col + game.piece.position.col) as i32 * SCALE as i32;
-        let y = (*row + game.piece.position.row) as i32 * SCALE as i32;
+        let y = ((*row + game.piece.position.row) as i32 - OFFSCREEN_ROWS as i32) * SCALE as i32;
         canvas.copy(&texture, regions[game.piece.color as usize], Rect::new(x, y, SCALE, SCALE))?;
     }
 
