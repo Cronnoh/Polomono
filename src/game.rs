@@ -26,6 +26,7 @@ pub struct Game {
     pub piece_data: HashMap<String, PieceType>,
     kick_data: HashMap<String, KickData>,
     bag: Vec<String>,
+    pub stats: Stats,
 
     das: u128,
     arr: u128,
@@ -34,7 +35,7 @@ pub struct Game {
     gravity_timer: u128,
     lock_timer: u128,
     can_hold: bool,
-    pub stats: Stats,
+    prev_clear_was_fancy: bool,
 }
 
 impl Game {
@@ -70,6 +71,7 @@ impl Game {
             lock_timer: 0,
             can_hold: true,
             stats,
+            prev_clear_was_fancy: false,
         })
     }
 
@@ -134,7 +136,7 @@ impl Game {
         }
 
         if placed_piece {
-            let _bonus = self.piece.check_bonus(&self.matrix);
+            let bonus = self.piece.check_bonus(&self.matrix);
             self.piece.lock(&mut self.matrix);
             self.lock_timer = 0;
             self.gravity_timer = 0;
@@ -143,6 +145,7 @@ impl Game {
             self.stats.pieces_placed += 1;
             let remove = filled_rows(&mut self.matrix);
             if remove.len() > 0 {
+                self.update_score(remove.len() as u32, bonus);
                 self.stats.lines_cleared += remove.len() as u32;
                 remove_rows(&mut self.matrix, remove);
             }
@@ -187,6 +190,23 @@ impl Game {
         self.gravity_timer = 0;
         self.lock_timer = 0;
         self.piece.update_ghost(&self.matrix);
+    }
+
+    fn update_score(&mut self, cleared_rows: u32, bonus: bool) {
+        let exponent = if bonus {
+            cleared_rows + 1
+        } else {
+            cleared_rows - 1
+        };
+        let mut points = 100 * u32::pow(2, exponent);
+
+        let fancy = cleared_rows >= 4 || (bonus && cleared_rows >= 2);
+        if self.prev_clear_was_fancy && fancy {
+            points += (points as f64 * 0.5) as u32;
+        }
+
+        self.prev_clear_was_fancy = fancy;
+        self.stats.score += points;
     }
 }
 

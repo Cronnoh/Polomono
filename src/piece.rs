@@ -3,7 +3,6 @@ use crate::game::Matrix;
 use std::{cmp::min, collections::HashMap, fs};
 use serde::Deserialize;
 
-
 #[derive(Copy, Clone, PartialEq, Deserialize)]
 pub enum PieceColor {
     Empty,

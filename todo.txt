@@ -10,10 +10,10 @@ controller support (M)
 DAS keys (E)
 
 --timer (E)
-score (M)
+--score (M)
 --line counter (E)
 --piece counter (E)
-t-spin bonus (H)
+--t-spin bonus (H)
 combos (M)
 losing (M)
 

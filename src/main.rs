@@ -199,6 +199,14 @@ fn format_time(microseconds: u128) -> String {
 
 fn create_stat_textures<'a, T>(stats: &game::Stats, font: &Font, texture_creator: &'a TextureCreator<T>) -> Result<Vec<Texture<'a>>, String> {
     let mut textures = Vec::new();
+    let score_surface = font
+        .render(&stats.score.to_string())
+        .blended(Color::RGB(255, 255, 255))
+        .map_err(|e| e.to_string())?;
+    textures.push(texture_creator
+        .create_texture_from_surface(&score_surface)
+        .map_err(|e| e.to_string())?);
+
     let time_surface = font
         .render(&format_time(stats.time))
         .blended(Color::RGB(255, 255, 255))
