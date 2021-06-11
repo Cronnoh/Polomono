@@ -15,7 +15,7 @@ DAS keys (E)
 --piece counter (E)
 --t-spin bonus (H)
 combos (M)
-losing (M)
+--losing (M)
 
 convert pieces to [col, row] (B)
 ARS pieces/kicks (B)

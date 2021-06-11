@@ -36,6 +36,7 @@ pub struct Game {
     lock_timer: u128,
     can_hold: bool,
     prev_clear_was_fancy: bool,
+    game_over: bool,
 }
 
 impl Game {
@@ -72,10 +73,14 @@ impl Game {
             can_hold: true,
             stats,
             prev_clear_was_fancy: false,
+            game_over: false,
         })
     }
 
     pub fn update(&mut self, input: &mut Input, elapsed: u128) {
+        if self.game_over {
+            return;
+        }
         self.stats.time += elapsed;
         let (movement_action, rotation_action) = read_inputs(&input);
         let mut placed_piece = false;
@@ -138,6 +143,9 @@ impl Game {
         if placed_piece {
             let bonus = self.piece.check_bonus(&self.matrix);
             self.piece.lock(&mut self.matrix);
+            if self.check_loss() {
+                self.game_over = true;
+            }
             self.lock_timer = 0;
             self.gravity_timer = 0;
             self.arr_leftover = 0;
@@ -207,6 +215,16 @@ impl Game {
 
         self.prev_clear_was_fancy = fancy;
         self.stats.score += points;
+    }
+
+    /* Lose is the piece is placed entirely offscreen */
+    fn check_loss(&self) -> bool {
+        let mut lowest = 0;
+        for (row, _) in self.piece.get_orientation().iter() {
+            // Max because down is positive
+            lowest = std::cmp::max(lowest, row + self.piece.position.row);
+        }
+        lowest < crate::OFFSCREEN_ROWS as i8
     }
 }
 

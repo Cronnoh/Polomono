@@ -178,7 +178,11 @@ impl Piece {
             }
             min_fall_distance = min(min_fall_distance, fall_distance);
         }
-        self.ghost_position = self.position.row + min_fall_distance as i8 - 1;
+        self.ghost_position = if min_fall_distance > 0 {
+            self.position.row + min_fall_distance as i8 - 1
+        } else {
+            self.position.row
+        };
     }
 
     pub fn is_grounded(&self, matrix: &Matrix) -> bool {
