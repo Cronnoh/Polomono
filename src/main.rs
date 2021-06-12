@@ -213,39 +213,21 @@ fn format_time(microseconds: u128) -> String {
 
 fn create_stat_textures<'a, T>(stats: &game::Stats, font: &Font, texture_creator: &'a TextureCreator<T>) -> Result<Vec<Texture<'a>>, String> {
     let mut textures = Vec::new();
-    let score_surface = font
-        .render(&stats.score.to_string())
-        .blended(Color::RGB(255, 255, 255))
-        .map_err(|e| e.to_string())?;
-    textures.push(texture_creator
-        .create_texture_from_surface(&score_surface)
-        .map_err(|e| e.to_string())?);
-
-    let time_surface = font
-        .render(&format_time(stats.time))
-        .blended(Color::RGB(255, 255, 255))
-        .map_err(|e| e.to_string())?;
-    textures.push(texture_creator
-        .create_texture_from_surface(&time_surface)
-        .map_err(|e| e.to_string())?);
-
-    let lines_cleared_surface = font
-        .render(&stats.lines_cleared.to_string())
-        .blended(Color::RGB(255, 255, 255))
-        .map_err(|e| e.to_string())?;
-    textures.push(texture_creator
-        .create_texture_from_surface(&lines_cleared_surface)
-        .map_err(|e| e.to_string())?);
-
-    let pieces_placed_surface = font
-        .render(&stats.pieces_placed.to_string())
-        .blended(Color::RGB(255, 255, 255))
-        .map_err(|e| e.to_string())?;
-    textures.push(texture_creator
-        .create_texture_from_surface(&pieces_placed_surface)
-        .map_err(|e| e.to_string())?);        
+    textures.push(create_text_texture(&stats.score.to_string(), font, texture_creator)?);
+    textures.push(create_text_texture(&format_time(stats.time), font, texture_creator)?);
+    textures.push(create_text_texture(&stats.lines_cleared.to_string(), font, texture_creator)?);
+    textures.push(create_text_texture(&stats.pieces_placed.to_string(), font, texture_creator)?);
 
     Ok(textures)
+}
+
+fn create_text_texture<'a, T>(text: &String, font: &Font, texture_creator: &'a TextureCreator<T>) -> Result<Texture<'a>, String>{
+    let surface = font
+        .render(text)
+        .blended(Color::RGB(255, 255, 255))
+        .map_err(|e| e.to_string())?;
+    texture_creator.create_texture_from_surface(&surface)
+        .map_err(|e| e.to_string())
 }
 
 fn load_data<T: DeserializeOwned>(file_path: &std::path::Path) -> Result<T, String> {
