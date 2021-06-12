@@ -4,12 +4,6 @@ use std::collections::HashMap;
 
 use rand::Rng;
 
-const DAS: u128 = 100000;
-const ARR: u128 = 0;
-const GRAVITY: u128 = 250000;
-const LOCK_DELAY: u128 = 500000;
-const PREVIEWS: usize = 5;
-
 pub type Matrix = Vec<Vec<PieceColor>>;
 
 pub struct Stats {
@@ -33,21 +27,23 @@ pub struct Game {
     arr_leftover: u128,
     gravity: u128,
     gravity_timer: u128,
+    lock_delay: u128,
     lock_timer: u128,
+    preview_count: usize,
     can_hold: bool,
     prev_clear_was_fancy: bool,
     game_over: bool,
 }
 
 impl Game {
-    pub fn new(matrix_width: usize, matrix_height: usize) -> Result<Self, String> {
-        let matrix = vec![vec![PieceColor::Empty; matrix_width]; matrix_height];
+    pub fn new(config: &crate::Config) -> Result<Self, String> {
+        let matrix = vec![vec![PieceColor::Empty; config.matrix_width]; config.matrix_height+crate::OFFSCREEN_ROWS];
         let piece_data = load_piece_data()?;
         let kick_data = load_kick_data()?;
         validate_data(&piece_data, &kick_data)?;
 
         let mut bag = generate_bag(&piece_data);
-        let piece = next_piece(&mut bag, &piece_data, &matrix);
+        let piece = next_piece(&mut bag, &piece_data, &matrix, config.preview_count);
 
         let stats = Stats {
             score: 0,
@@ -63,15 +59,17 @@ impl Game {
             piece_data,
             kick_data,
             bag,
-
-            das: DAS,
-            arr: ARR,
-            arr_leftover: 0,
-            gravity: GRAVITY,
-            gravity_timer: 0,
-            lock_timer: 0,
-            can_hold: true,
             stats,
+
+            das: config.das as u128 * 1000,
+            arr: config.arr as u128 * 1000,
+            arr_leftover: 0,
+            gravity: config.gravity as u128 * 1000,
+            gravity_timer: 0,
+            lock_delay: config.lock_delay as u128 * 1000,
+            lock_timer: 0,
+            preview_count: config.preview_count,
+            can_hold: true,
             prev_clear_was_fancy: false,
             game_over: false,
         })
@@ -133,7 +131,7 @@ impl Game {
 
         if self.piece.is_grounded(&self.matrix) {
             self.lock_timer += elapsed;
-            if self.lock_timer >= LOCK_DELAY {
+            if self.lock_timer >= self.lock_delay {
                 placed_piece = true;
             }
         } else {
@@ -157,7 +155,7 @@ impl Game {
                 self.stats.lines_cleared += remove.len() as u32;
                 remove_rows(&mut self.matrix, remove);
             }
-            self.piece = next_piece(&mut self.bag, &self.piece_data, &self.matrix);
+            self.piece = next_piece(&mut self.bag, &self.piece_data, &self.matrix, self.preview_count);
         }
     }
 
@@ -180,7 +178,7 @@ impl Game {
     }
 
     pub fn get_preview_pieces(&self) -> &[String] {
-        &self.bag[self.bag.len()-PREVIEWS..]
+        &self.bag[self.bag.len()-self.preview_count..]
     }
 
     fn hold_piece(&mut self) {
@@ -190,7 +188,7 @@ impl Game {
                 std::mem::swap(&mut self.piece, held);
             }
             None => {
-                let next = next_piece(&mut self.bag, &self.piece_data, &self.matrix);
+                let next = next_piece(&mut self.bag, &self.piece_data, &self.matrix, self.preview_count);
                 self.held = Some(std::mem::replace(&mut self.piece, next));
             }
         }
@@ -241,8 +239,8 @@ fn generate_bag(piece_data: &HashMap<String, PieceType>) -> Vec<String> {
     bag
 }
 
-fn next_piece(bag: &mut Vec<String>, piece_data: &HashMap<String, PieceType>, matrix: &Matrix) -> Piece {
-    while bag.len() <= PREVIEWS {
+fn next_piece(bag: &mut Vec<String>, piece_data: &HashMap<String, PieceType>, matrix: &Matrix, preview_count: usize) -> Piece {
+    while bag.len() <= preview_count {
         let mut new_bag = generate_bag(&piece_data);
         new_bag.append(bag);
         *bag = new_bag;

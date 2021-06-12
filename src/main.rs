@@ -3,7 +3,7 @@ mod game;
 mod input;
 use piece::PieceColor;
 
-use std::time::Instant;
+use std::{path::Path, time::Instant};
 
 use sdl2::{
     rect::Rect,
@@ -14,20 +14,20 @@ use sdl2::{
     image::{InitFlag, LoadTexture},
     ttf::{Font}
 };
+use serde::{Deserialize, de::DeserializeOwned};
 
-const MATRIX_WIDTH: usize = 10;
-const MATRIX_HEIGHT: usize = 20;
 const OFFSCREEN_ROWS: usize = 5;
 const SCALE: u32 = 32;
 
-struct Config {
+#[derive(Deserialize)]
+pub struct Config {
     matrix_height: usize,
     matrix_width: usize,
 
-    das: u128,
-    arr: u128,
-    gravity: u128,
-    lock_delay: u128,
+    das: u32,
+    arr: u32,
+    gravity: u32,
+    lock_delay: u32,
     preview_count: usize,
 }
 
@@ -55,10 +55,7 @@ fn main() -> Result<(), String> {
 
     let font = ttf_context.load_font("assets/Hack-Bold.ttf", 48)?;
 
-    let config_file = std::fs::read_to_string("config.toml")
-        .map_err(|e| format!("Error opening config.toml: {}", e.to_string()))?;
-    let config = toml::from_str(&config_file)
-        .map_err(|e| format!("Error reading config.toml: {}", e.to_string()))?;
+    let config: Config = load_data(Path::new("config.toml"))?;
 
     let mut input = input::Input {
         hard_drop: false,
@@ -73,7 +70,7 @@ fn main() -> Result<(), String> {
         hold: false,
     };
     
-    let mut game = game::Game::new(MATRIX_WIDTH, MATRIX_HEIGHT+OFFSCREEN_ROWS)?;
+    let mut game = game::Game::new(&config)?;
     let mut current_time = Instant::now();
     let mut event_pump = sdl_context.event_pump()?;
     'running: loop {
@@ -87,7 +84,7 @@ fn main() -> Result<(), String> {
                     break 'running;
                 }
                 Event::KeyDown { scancode: Some(Scancode::R), repeat: false, ..} => {
-                    game = game::Game::new(MATRIX_WIDTH, MATRIX_HEIGHT+OFFSCREEN_ROWS)?;
+                    game = game::Game::new(&config)?;
                 }
                 Event::KeyDown{..} | Event::KeyUp{..} => {
                     input::handle_input_event(&mut input, event);
@@ -249,4 +246,11 @@ fn create_stat_textures<'a, T>(stats: &game::Stats, font: &Font, texture_creator
         .map_err(|e| e.to_string())?);        
 
     Ok(textures)
+}
+
+fn load_data<T: DeserializeOwned>(file_path: &std::path::Path) -> Result<T, String> {
+    let data_file = std::fs::read_to_string(file_path)
+        .map_err(|e| format!("Error opening {}: {}", file_path.to_str().unwrap(), e.to_string()))?;
+    toml::from_str(&data_file)
+        .map_err(|e| format!("Error reading {}: {}", file_path.to_str().unwrap(), e.to_string()))
 }

@@ -1,9 +1,14 @@
-[config]
-Matrix_Height = 20
-Matrix_Width = 10
+matrix_height = 20
+matrix_width = 10
 
-DAS = 100
-ARR = 0
-Gravity = 250
-Lock_Delay = 500
-Preview_Count = 5
+das = 100
+arr = 0
+gravity = 250
+lock_delay = 500
+preview_count = 5
+
+# Controls
+# Hold Toggle
+# Hard drop toggle
+# soft drop speed
+# ARE
