@@ -1,6 +1,6 @@
 use crate::game::Matrix;
 
-use std::{cmp::min, collections::HashMap, fs};
+use std::{cmp::min, collections::HashMap};
 use serde::Deserialize;
 
 #[derive(Copy, Clone, PartialEq, Deserialize)]
@@ -204,20 +204,4 @@ impl Piece {
         let collides_right = self.check_collision(matrix, 1, 0, self.rotation);
         collides_up && collides_left && collides_right
     }
-}
-
-pub fn load_piece_data() -> Result<HashMap<String, PieceType>, String> {
-    let piece_data_file = fs::read_to_string("piece_data.toml")
-        .map_err(|e| format!("Error opening piece_data.toml: {}", e.to_string()))?;
-    let piece_data = toml::from_str(&piece_data_file)
-        .map_err(|e| format!("Error reading piece_data.toml: {}", e.to_string()))?;
-    Ok(piece_data)
-}
-
-pub fn load_kick_data() -> Result<HashMap<String, KickData>, String> {
-    let kick_data_file = fs::read_to_string("wall_kick_data.toml")
-        .map_err(|e| format!("Error opening wall_kick_data.toml: {}", e.to_string()))?;
-    let kick_data = toml::from_str(&kick_data_file)
-        .map_err(|e| format!("Error reading wall_kick_data.toml: {}", e.to_string()))?;
-    Ok(kick_data)
 }

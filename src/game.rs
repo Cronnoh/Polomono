@@ -38,8 +38,8 @@ pub struct Game {
 impl Game {
     pub fn new(config: &crate::Config) -> Result<Self, String> {
         let matrix = vec![vec![PieceColor::Empty; config.matrix_width]; config.matrix_height+crate::OFFSCREEN_ROWS];
-        let piece_data = load_piece_data()?;
-        let kick_data = load_kick_data()?;
+        let piece_data = crate::load_data(std::path::Path::new("piece_data.toml"))?;
+        let kick_data = crate::load_data(std::path::Path::new("wall_kick_data.toml"))?;
         validate_data(&piece_data, &kick_data)?;
 
         let mut bag = generate_bag(&piece_data);
