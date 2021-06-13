@@ -61,9 +61,7 @@ fn main() -> Result<(), String> {
         hard_drop: false,
         soft_drop: false,
         left: false,
-        left_held: 0,
         right: false,
-        right_held: 0,
         rot_cw: false,
         rot_ccw: false,
         rot_180: false,
@@ -92,8 +90,6 @@ fn main() -> Result<(), String> {
                 _ => {},
             }
         }
-
-        input::update_held_times(&mut input, elapsed);
 
         game.update(&mut input, elapsed);
 

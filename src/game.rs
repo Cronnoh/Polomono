@@ -23,6 +23,7 @@ pub struct Game {
     pub stats: Stats,
 
     das: u128,
+    das_timer: u128,
     arr: u128,
     arr_leftover: u128,
     gravity: u128,
@@ -32,6 +33,7 @@ pub struct Game {
     preview_count: usize,
     can_hold: bool,
     prev_clear_was_fancy: bool,
+    prev_direction: HDirection,
     game_over: bool,
 }
 
@@ -62,6 +64,7 @@ impl Game {
             stats,
 
             das: config.das as u128 * 1000,
+            das_timer: 0,
             arr: config.arr as u128 * 1000,
             arr_leftover: 0,
             gravity: config.gravity as u128 * 1000,
@@ -71,6 +74,7 @@ impl Game {
             preview_count: config.preview_count,
             can_hold: true,
             prev_clear_was_fancy: false,
+            prev_direction: HDirection::None,
             game_over: false,
         })
     }
@@ -90,13 +94,13 @@ impl Game {
                 self.piece.hard_drop();
                 placed_piece = true;
             }
-            MovementAction::Left => {
-                self.handle_piece_movement(input.left_held, elapsed, HDirection::Left);
+            MovementAction::Horizontal(direction) => {
+                self.handle_piece_movement(elapsed, direction);
             }
-            MovementAction::Right => {
-                self.handle_piece_movement(input.right_held, elapsed, HDirection::Right);
+            _ => {
+                self.das_timer = 0;
+                self.prev_direction = HDirection::None;
             }
-            _ => {}
         }
 
         match rotation_action {
@@ -147,6 +151,8 @@ impl Game {
             self.lock_timer = 0;
             self.gravity_timer = 0;
             self.arr_leftover = 0;
+            self.das_timer = 0;
+            self.prev_direction = HDirection::None;
             self.can_hold = true;
             self.stats.pieces_placed += 1;
             let remove = filled_rows(&mut self.matrix);
@@ -159,22 +165,31 @@ impl Game {
         }
     }
 
-    fn handle_piece_movement(&mut self, time_held: u128, elapsed: u128, direction: HDirection) {
-        if time_held == elapsed {
+    fn handle_piece_movement(&mut self, elapsed: u128, direction: HDirection) {
+        if self.prev_direction != direction {
             self.piece.movement(&self.matrix, direction, VDirection::None);
+            self.das_timer = 0;
             self.arr_leftover = 0;
-        }
-        if time_held > self.das {
-            let mut time = elapsed + self.arr_leftover;
-            while time > self.arr {
-                if !self.piece.movement(&self.matrix, direction, VDirection::None) {
-                    self.arr_leftover = 0;
-                    break;
-                }
-                time -= self.arr;
+            self.prev_direction = direction;
+        } else {
+            self.das_timer += elapsed;
+            if self.das_timer >= self.das {
+                let time = elapsed + self.arr_leftover;
+                self.auto_shift(direction, time);
             }
-            self.arr_leftover = time;
         }
+    }
+
+    fn auto_shift(&mut self, direction: HDirection, time: u128) {
+        let mut leftover = time;
+        while leftover > self.arr {
+            if !self.piece.movement(&self.matrix, direction, VDirection::None) {
+                self.arr_leftover = 0;
+                return;
+            }
+            leftover -= self.arr;
+        }
+        self.arr_leftover = leftover;
     }
 
     pub fn get_preview_pieces(&self) -> &[String] {
@@ -195,6 +210,8 @@ impl Game {
         self.arr_leftover = 0;
         self.gravity_timer = 0;
         self.lock_timer = 0;
+        self.das_timer = 0;
+        self.prev_direction = HDirection::None;
         self.piece.update_ghost(&self.matrix);
     }
 
@@ -286,8 +303,8 @@ fn read_inputs(input: &Input) -> (MovementAction, RotationAction) {
         (true, _, _) =>  {
             return (MovementAction::HardDrop, RotationAction::None);
         }
-        (_, true, false) => MovementAction::Left,
-        (_, false, true) => MovementAction::Right,
+        (_, true, false) => MovementAction::Horizontal(HDirection::Left),
+        (_, false, true) => MovementAction::Horizontal(HDirection::Right),
         _ => MovementAction::None,
     };
 

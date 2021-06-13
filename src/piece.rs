@@ -19,12 +19,11 @@ pub enum PieceColor {
 
 pub enum MovementAction {
     HardDrop,
-    Left,
-    Right,
+    Horizontal(HDirection),
     None,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum HDirection {
     Left = -1,
     None = 0,
