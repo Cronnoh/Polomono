@@ -35,6 +35,9 @@ fn main() -> Result<(), String> {
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
     let _image_context = sdl2::image::init(InitFlag::PNG)?;
+    let game_controller_subsystem  = sdl_context.game_controller()?;
+    let _controller = input::open_game_controller(game_controller_subsystem)?;
+
     let ttf_context = sdl2::ttf::init()
         .map_err(|e| e.to_string())?;
 
@@ -57,16 +60,7 @@ fn main() -> Result<(), String> {
 
     let config: Config = load_data(Path::new("config.toml"))?;
 
-    let mut input = input::Input {
-        hard_drop: false,
-        soft_drop: false,
-        left: false,
-        right: false,
-        rot_cw: false,
-        rot_ccw: false,
-        rot_180: false,
-        hold: false,
-    };
+    let mut input = input::Input::new();
     
     let mut game = game::Game::new(&config)?;
     let mut current_time = Instant::now();
@@ -81,10 +75,12 @@ fn main() -> Result<(), String> {
                 | Event::KeyDown { scancode: Some(Scancode::Escape), .. } => {
                     break 'running;
                 }
-                Event::KeyDown { scancode: Some(Scancode::R), repeat: false, ..} => {
+                Event::KeyDown { scancode: Some(Scancode::R), repeat: false, ..}
+                | Event::ControllerButtonDown { button:sdl2::controller::Button::Back, .. } => {
                     game = game::Game::new(&config)?;
                 }
-                Event::KeyDown{..} | Event::KeyUp{..} => {
+                Event::KeyDown{..} | Event::KeyUp{..}
+                | Event::ControllerButtonDown{..} | Event::ControllerButtonUp{..} => {
                     input::handle_input_event(&mut input, event);
                 }
                 _ => {},
