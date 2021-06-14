@@ -105,11 +105,11 @@ impl Game {
                 self.handle_piece_movement(elapsed, direction);
             }
             MovementAction::ShiftHorizontal(direction) => {
+                self.direction_change(direction);
                 self.auto_shift(direction, std::u128::MAX, 0);
             }
             _ => {
-                self.das_timer = 0;
-                self.prev_direction = HDirection::None;
+                self.direction_change(HDirection::None);
             }
         }
 
@@ -160,9 +160,7 @@ impl Game {
             }
             self.lock_timer = 0;
             self.gravity_timer = 0;
-            self.arr_leftover = 0;
-            self.das_timer = 0;
-            self.prev_direction = HDirection::None;
+            self.direction_change(HDirection::None);
             self.can_hold = true;
             self.stats.pieces_placed += 1;
             let remove = filled_rows(&mut self.matrix);
@@ -178,9 +176,7 @@ impl Game {
     fn handle_piece_movement(&mut self, elapsed: u128, direction: HDirection) {
         if self.prev_direction != direction {
             self.piece.movement(&self.matrix, direction, VDirection::None);
-            self.das_timer = 0;
-            self.arr_leftover = 0;
-            self.prev_direction = direction;
+            self.direction_change(direction);
         } else {
             self.das_timer += elapsed;
             if self.das_timer >= self.das {
@@ -217,11 +213,9 @@ impl Game {
                 self.held = Some(std::mem::replace(&mut self.piece, next));
             }
         }
-        self.arr_leftover = 0;
         self.gravity_timer = 0;
         self.lock_timer = 0;
-        self.das_timer = 0;
-        self.prev_direction = HDirection::None;
+        self.direction_change(HDirection::None);
         self.piece.update_ghost(&self.matrix);
     }
 
@@ -250,6 +244,12 @@ impl Game {
             lowest = std::cmp::max(lowest, row + self.piece.position.row);
         }
         lowest < crate::OFFSCREEN_ROWS as i8
+    }
+
+    fn direction_change(&mut self, direction: HDirection) {
+        self.das_timer = 0;
+        self.arr_leftover = 0;
+        self.prev_direction = direction;
     }
 }
 
