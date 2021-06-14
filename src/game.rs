@@ -6,6 +6,13 @@ use rand::Rng;
 
 pub type Matrix = Vec<Vec<PieceColor>>;
 
+pub enum MovementAction {
+    HardDrop,
+    Horizontal(HDirection),
+    ShiftHorizontal(HDirection),
+    None,
+}
+
 pub struct Stats {
     pub score: u32,
     pub time: u128,
@@ -97,6 +104,9 @@ impl Game {
             MovementAction::Horizontal(direction) => {
                 self.handle_piece_movement(elapsed, direction);
             }
+            MovementAction::ShiftHorizontal(direction) => {
+                self.auto_shift(direction, std::u128::MAX, 0);
+            }
             _ => {
                 self.das_timer = 0;
                 self.prev_direction = HDirection::None;
@@ -175,19 +185,19 @@ impl Game {
             self.das_timer += elapsed;
             if self.das_timer >= self.das {
                 let time = elapsed + self.arr_leftover;
-                self.auto_shift(direction, time);
+                self.auto_shift(direction, time, self.arr);
             }
         }
     }
 
-    fn auto_shift(&mut self, direction: HDirection, time: u128) {
+    fn auto_shift(&mut self, direction: HDirection, time: u128, arr: u128) {
         let mut leftover = time;
-        while leftover > self.arr {
+        while leftover > arr {
             if !self.piece.movement(&self.matrix, direction, VDirection::None) {
                 self.arr_leftover = 0;
                 return;
             }
-            leftover -= self.arr;
+            leftover -= arr;
         }
         self.arr_leftover = leftover;
     }
@@ -299,12 +309,14 @@ fn remove_rows(matrix: &mut Matrix, remove: Vec<usize>) {
 }
 
 fn read_inputs(input: &Input) -> (MovementAction, RotationAction) {
-    let movement_action = match (input.hard_drop, input.left, input.right) {
-        (true, _, _) =>  {
+    let movement_action = match (input.hard_drop, input.left, input.right, input.shift_left, input.shift_right) {
+        (true, _, _, _, _) =>  {
             return (MovementAction::HardDrop, RotationAction::None);
         }
-        (_, true, false) => MovementAction::Horizontal(HDirection::Left),
-        (_, false, true) => MovementAction::Horizontal(HDirection::Right),
+        (_, _, _, true, false) => MovementAction::ShiftHorizontal(HDirection::Left),
+        (_, _, _, false, true) => MovementAction::ShiftHorizontal(HDirection::Right),
+        (_, true, false, _, _) => MovementAction::Horizontal(HDirection::Left),
+        (_, false, true, _, _) => MovementAction::Horizontal(HDirection::Right),
         _ => MovementAction::None,
     };
 
