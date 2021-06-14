@@ -1,10 +1,11 @@
+use std::collections::HashMap;
+
 use sdl2::{
     GameControllerSubsystem,
     controller::GameController,
-    controller::Button,
     event::Event,
-    keyboard::Scancode
 };
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug)]
 pub struct Input {
@@ -13,8 +14,8 @@ pub struct Input {
     pub left: bool,
     pub right: bool,
     pub rot_cw: bool,
-    pub rot_ccw: bool,
     pub rot_180: bool,
+    pub rot_ccw: bool,
     pub hold: bool,
 }
 
@@ -26,81 +27,55 @@ impl Input {
             left: false,
             right: false,
             rot_cw: false,
-            rot_ccw: false,
             rot_180: false,
+            rot_ccw: false,
             hold: false,
         }
     }
 }
 
-pub fn handle_input_event(input: &mut Input, event: Event) {
-    match event {
-        Event::KeyDown { scancode: Some(Scancode::W), repeat: false, .. }
-        | Event::ControllerButtonDown { button: Button::DPadUp, ..} => {
-            input.hard_drop = true;
+#[derive(Serialize, Deserialize)]
+pub enum GameInput {
+    HardDrop,
+    SoftDrop,
+    Left,
+    Right,
+    RotateCW,
+    Rotate180,
+    RotateCCW,
+    Hold,
+}
+
+pub fn handle_input_event(input: &mut Input, event: Event, bindings: &HashMap<String, GameInput>) {
+    let (button, state) = match event {
+        Event::KeyDown { keycode: Some(key), ..} => {
+            (format!("Key({})", key.to_string()), true)
         }
-        Event::KeyUp { scancode: Some(Scancode::W), repeat: false, .. }
-        | Event::ControllerButtonUp { button: Button::DPadUp, ..} => {
-            input.hard_drop = false;
+        Event::ControllerButtonDown { button: btn, ..} => {
+            (format!("Btn({})", btn.string()), true)
         }
-        Event::KeyDown { scancode: Some(Scancode::S), repeat: false, .. }
-        | Event::ControllerButtonDown { button: Button::DPadDown, ..} => {
-            input.soft_drop = true;
+        Event::KeyUp { keycode: Some(key), ..} => {
+            (format!("Key({})", key.to_string()), false)
         }
-        Event::KeyUp { scancode: Some(Scancode::S), repeat: false, .. }
-        | Event::ControllerButtonUp { button: Button::DPadDown, ..} => {
-            input.soft_drop = false;
+        Event::ControllerButtonUp { button: btn, ..} => {
+            (format!("Btn({})", btn.string()), false)
         }
-        Event::KeyDown { scancode: Some(Scancode::A), repeat: false, .. }
-        | Event::ControllerButtonDown { button: Button::DPadLeft, ..} => {
-            input.left = true;
+        _ => { return }
+    };
+
+    match bindings.get(&button) {
+        Some(x) => match x {
+            GameInput::HardDrop => input.hard_drop = state,
+            GameInput::SoftDrop => input.soft_drop = state,
+            GameInput::Left => input.left = state,
+            GameInput::Right => input.right = state,
+            GameInput::RotateCW => input.rot_cw = state,
+            GameInput::Rotate180 => input.rot_180 = state,
+            GameInput::RotateCCW => input.rot_ccw = state,
+            GameInput::Hold => input.hold = state,
         }
-        Event::KeyUp { scancode: Some(Scancode::A), repeat: false, .. }
-        | Event::ControllerButtonUp { button: Button::DPadLeft, ..} => {
-            input.left = false;
-        }
-        Event::KeyDown { scancode: Some(Scancode::D), repeat: false, .. }
-        | Event::ControllerButtonDown { button: Button::DPadRight, ..} => {
-            input.right = true;
-        }
-        Event::KeyUp { scancode: Some(Scancode::D), repeat: false, .. }
-        | Event::ControllerButtonUp { button: Button::DPadRight, ..} => {
-            input.right = false;
-        }
-        Event::KeyDown { scancode: Some(Scancode::J), repeat: false, .. }
-        | Event::ControllerButtonDown { button: Button::A, ..} => {
-            input.rot_ccw = true;
-        }
-        Event::KeyUp { scancode: Some(Scancode::J), repeat: false, .. }
-        | Event::ControllerButtonUp { button: Button::A, ..} => {
-            input.rot_ccw = false;
-        }
-        Event::KeyDown { scancode: Some(Scancode::K), repeat: false, .. }
-        | Event::ControllerButtonDown { button: Button::Y, ..} => {
-            input.rot_180 = true;
-        }
-        Event::KeyUp { scancode: Some(Scancode::K), repeat: false, .. }
-        | Event::ControllerButtonUp { button: Button::Y, ..} => {
-            input.rot_180 = false;
-        }
-        Event::KeyDown { scancode: Some(Scancode::L), repeat: false, .. }
-        | Event::ControllerButtonDown { button: Button::B, ..} => {
-            input.rot_cw = true;
-        }
-        Event::KeyUp { scancode: Some(Scancode::L), repeat: false, .. }
-        | Event::ControllerButtonUp { button: Button::B, ..} => {
-            input.rot_cw = false;
-        }
-        Event::KeyDown { scancode: Some(Scancode::LShift), repeat: false, .. }
-        | Event::ControllerButtonDown { button: Button::LeftShoulder, ..} => {
-            input.hold = true;
-        }
-        Event::KeyUp { scancode: Some(Scancode::LShift), repeat: false, .. }
-        | Event::ControllerButtonUp { button: Button::LeftShoulder, ..} => {
-            input.hold = false;
-        }
-        _ => {}
-    }
+        None => return,
+    };
 }
 
 pub fn open_game_controller(game_controller_subsystem: GameControllerSubsystem) -> Result<Option<GameController>, String> {

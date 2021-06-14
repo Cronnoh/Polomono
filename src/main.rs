@@ -1,18 +1,18 @@
 mod piece;
 mod game;
 mod input;
+use input::GameInput;
 use piece::PieceColor;
 
-use std::{path::Path, time::Instant};
+use std::{collections::HashMap, path::Path, time::Instant};
 
 use sdl2::{
+    event::Event,
+    image::{InitFlag, LoadTexture},
+    keyboard::Scancode, pixels::Color,
     rect::Rect,
     render::{WindowCanvas, Texture, BlendMode, TextureCreator},
-    pixels::Color,
-    event::Event,
-    keyboard::Scancode,
-    image::{InitFlag, LoadTexture},
-    ttf::{Font}
+    ttf::Font,
 };
 use serde::{Deserialize, de::DeserializeOwned};
 
@@ -59,9 +59,10 @@ fn main() -> Result<(), String> {
     let font = ttf_context.load_font("assets/Hack-Bold.ttf", 48)?;
 
     let config: Config = load_data(Path::new("config.toml"))?;
+    let bindings: HashMap<String, GameInput> = load_data(Path::new("control_config.toml"))?;
 
     let mut input = input::Input::new();
-    
+
     let mut game = game::Game::new(&config)?;
     let mut current_time = Instant::now();
     let mut event_pump = sdl_context.event_pump()?;
@@ -81,7 +82,7 @@ fn main() -> Result<(), String> {
                 }
                 Event::KeyDown{..} | Event::KeyUp{..}
                 | Event::ControllerButtonDown{..} | Event::ControllerButtonUp{..} => {
-                    input::handle_input_event(&mut input, event);
+                    input::handle_input_event(&mut input, event, &bindings);
                 }
                 _ => {},
             }

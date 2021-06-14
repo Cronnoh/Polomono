@@ -5,7 +5,7 @@ center matrix (E)
 
 --configuration file (E)
 randomizer options (M)
-rebindable controls (M)
+--rebindable controls (M)
 --controller support (M)
 DAS keys (E)
 
