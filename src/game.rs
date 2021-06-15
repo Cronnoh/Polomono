@@ -63,7 +63,7 @@ impl Game {
         let mut randomizer = Randomizer::new(config.piece_list.clone(), starting_randomizer);
         let mut piece_queue = randomizer.generate_pieces(&config.cannot_start_with);
         randomizer.style = config.randomizer;
-        extend_queue(&mut piece_queue, config.preview_count, &randomizer);
+        extend_queue(&mut piece_queue, config.preview_count, &mut randomizer);
         let piece = next_piece(&mut piece_queue, &piece_data, &matrix);
 
         let stats = Stats {
@@ -169,7 +169,7 @@ impl Game {
             self.can_hold = true;
             self.stats.pieces_placed += 1;
             self.handle_line_clears(bonus);
-            extend_queue(&mut self.piece_queue, self.preview_count, &self.randomizer);
+            extend_queue(&mut self.piece_queue, self.preview_count, &mut self.randomizer);
             self.piece = next_piece(&mut self.piece_queue, &self.piece_data, &self.matrix);
         }
     }
@@ -238,7 +238,7 @@ impl Game {
                 std::mem::swap(&mut self.piece, held);
             }
             None => {
-                extend_queue(&mut self.piece_queue, self.preview_count, &self.randomizer);
+                extend_queue(&mut self.piece_queue, self.preview_count, &mut self.randomizer);
                 let next = next_piece(&mut self.piece_queue, &self.piece_data, &self.matrix);
                 self.held = Some(std::mem::replace(&mut self.piece, next));
             }
@@ -293,7 +293,7 @@ fn next_piece(piece_queue: &mut Vec<String>, piece_data: &HashMap<String, PieceT
     piece
 }
 
-fn extend_queue(piece_queue: &mut Vec<String>, preview_count: usize, randomizer: &Randomizer) {
+fn extend_queue(piece_queue: &mut Vec<String>, preview_count: usize, randomizer: &mut Randomizer) {
     /* Add more pieces to the queue if it is too small */
     while piece_queue.len() <= preview_count {
         let mut new_bag = randomizer.generate_pieces(&None);
