@@ -13,7 +13,7 @@ pub enum MovementAction {
     ShiftHorizontal(HDirection),
     None,
 }
-
+/* All times are in microseconds (µs) */
 pub struct Stats {
     pub score: u32,
     pub time: u128,
@@ -27,17 +27,20 @@ pub struct Game {
     pub held: Option<Piece>,
     pub piece_data: HashMap<String, PieceType>,
     kick_data: HashMap<String, KickData>,
-    bag: Vec<String>,
+    piece_queue: Vec<String>,
     pub stats: Stats,
 
-    das: u128,
+    das: u128, // Delayed Auto-Shift - Time in µs that left/right must be held before auto-shift begins
+    arr: u128, // Auto-Repeat Rate - Time in µs the stays in each play during auto-shift
+    gravity: u128, // Time in µs the piece stays in each row while falling
+    lock_delay: u128, // Time in µs that the piece can stay grounded without locking into place
+
+    /* Timer fields count upward to the above related values */
     das_timer: u128,
-    arr: u128,
-    arr_leftover: u128,
-    gravity: u128,
     gravity_timer: u128,
-    lock_delay: u128,
     lock_timer: u128,
+    arr_leftover: u128, // Remainder of arr time from the previous update, should add to elapsed time
+
     preview_count: usize,
     can_hold: bool,
     prev_clear_was_fancy: bool,
@@ -52,8 +55,8 @@ impl Game {
         let kick_data = crate::load_data(std::path::Path::new("wall_kick_data.toml"))?;
         validate_data(&piece_data, &kick_data)?;
 
-        let mut bag = generate_bag(&piece_data);
-        let piece = next_piece(&mut bag, &piece_data, &matrix, config.preview_count);
+        let mut piece_queue = generate_bag(&piece_data);
+        let piece = next_piece(&mut piece_queue, &piece_data, &matrix, config.preview_count);
 
         let stats = Stats {
             score: 0,
@@ -68,17 +71,20 @@ impl Game {
             held: None,
             piece_data,
             kick_data,
-            bag,
+            piece_queue,
             stats,
 
+            // Config values are in milliseconds, must be converted to microseconds
             das: config.das as u128 * 1000,
-            das_timer: 0,
             arr: config.arr as u128 * 1000,
-            arr_leftover: 0,
             gravity: config.gravity as u128 * 1000,
-            gravity_timer: 0,
             lock_delay: config.lock_delay as u128 * 1000,
+
+            das_timer: 0,
+            gravity_timer: 0,
             lock_timer: 0,
+            arr_leftover: 0,
+
             preview_count: config.preview_count,
             can_hold: true,
             prev_clear_was_fancy: false,
@@ -94,7 +100,6 @@ impl Game {
         self.stats.time += elapsed;
         let (movement_action, rotation_action) = read_inputs(&input);
         let mut placed_piece = false;
-        let mut gravity = self.gravity;
 
         match movement_action {
             MovementAction::HardDrop => {
@@ -125,36 +130,22 @@ impl Game {
                 input.rot_180 = false;
                 input.rot_ccw = false;
                 if self.piece.rotate(&self.matrix, &self.kick_data, rotation_action) {
+                    /* Reduce the lock timer after a successful rotation to make spins easier */
                     self.lock_timer = std::cmp::max(0, self.lock_timer as i128 - self.lock_delay as i128/4) as u128;
                 }
-            }
-        }
-        
-        if input.soft_drop {
-            gravity /= 4;
-            self.gravity_timer = std::cmp::min(self.gravity_timer, gravity);
-        }
-        self.gravity_timer += elapsed;
-        while self.gravity_timer > gravity {
-            self.gravity_timer -= gravity;
-            if !self.piece.movement(&self.matrix, HDirection::None, VDirection::Down) {
-                break;
             }
         }
 
         if input.hold {
             input.hold = false;
-            if self.can_hold {
-                self.can_hold = false;
-                self.hold_piece();
-            }
+            self.hold_piece();
         }
+
+        self.gravity(elapsed, input.soft_drop);
 
         if self.piece.is_grounded(&self.matrix) {
             self.lock_timer += elapsed;
-            if self.lock_timer >= self.lock_delay {
-                placed_piece = true;
-            }
+            placed_piece = placed_piece || self.lock_timer >= self.lock_delay;
         } else {
             self.lock_timer = 0;
         }
@@ -162,21 +153,14 @@ impl Game {
         if placed_piece {
             let bonus = self.piece.check_bonus(&self.matrix);
             self.piece.lock(&mut self.matrix);
-            if self.check_loss() {
-                self.game_over = true;
-            }
+            self.game_over = self.check_loss();
             self.lock_timer = 0;
             self.gravity_timer = 0;
             self.direction_change(HDirection::None);
             self.can_hold = true;
             self.stats.pieces_placed += 1;
-            let remove = filled_rows(&mut self.matrix);
-            if remove.len() > 0 {
-                self.update_score(remove.len() as u32, bonus);
-                self.stats.lines_cleared += remove.len() as u32;
-                remove_rows(&mut self.matrix, remove);
-            }
-            self.piece = next_piece(&mut self.bag, &self.piece_data, &self.matrix, self.preview_count);
+            self.handle_line_clears(bonus);
+            self.piece = next_piece(&mut self.piece_queue, &self.piece_data, &self.matrix, self.preview_count);
         }
     }
 
@@ -205,18 +189,46 @@ impl Game {
         self.arr_leftover = leftover;
     }
 
+    fn gravity(&mut self, elapsed: u128, speed_up: bool) {
+        let mut gravity = self.gravity;
+        if speed_up {
+            gravity /= 4;
+            self.gravity_timer = std::cmp::min(self.gravity_timer, gravity);
+        }
+        self.gravity_timer += elapsed;
+        while self.gravity_timer > gravity {
+            self.gravity_timer -= gravity;
+            if !self.piece.movement(&self.matrix, HDirection::None, VDirection::Down) {
+                return;
+            }
+        }
+    }
+
+    fn handle_line_clears(&mut self, bonus: bool) {
+        let cleared_lines = filled_rows(&mut self.matrix);
+        if !cleared_lines.is_empty() {
+            self.update_score(cleared_lines.len() as u32, bonus);
+            self.stats.lines_cleared += cleared_lines.len() as u32;
+            remove_rows(&mut self.matrix, cleared_lines);
+        }
+    }
+
     pub fn get_preview_pieces(&self) -> &[String] {
-        &self.bag[self.bag.len()-self.preview_count..]
+        &self.piece_queue[self.piece_queue.len()-self.preview_count..]
     }
 
     fn hold_piece(&mut self) {
+        if !self.can_hold {
+            return;
+        }
+        self.can_hold = false;
         self.piece.reset_position();
         match &mut self.held {
             Some(held) => {
                 std::mem::swap(&mut self.piece, held);
             }
             None => {
-                let next = next_piece(&mut self.bag, &self.piece_data, &self.matrix, self.preview_count);
+                let next = next_piece(&mut self.piece_queue, &self.piece_data, &self.matrix, self.preview_count);
                 self.held = Some(std::mem::replace(&mut self.piece, next));
             }
         }
@@ -253,6 +265,7 @@ impl Game {
         lowest < crate::OFFSCREEN_ROWS as i8
     }
 
+    /* Reset timers when changing direction to make movement more consistent */
     fn direction_change(&mut self, direction: HDirection) {
         self.das_timer = 0;
         self.arr_leftover = 0;
@@ -273,20 +286,21 @@ fn generate_bag(piece_data: &HashMap<String, PieceType>) -> Vec<String> {
     bag
 }
 
-fn next_piece(bag: &mut Vec<String>, piece_data: &HashMap<String, PieceType>, matrix: &Matrix, preview_count: usize) -> Piece {
-    while bag.len() <= preview_count {
+fn next_piece(piece_queue: &mut Vec<String>, piece_data: &HashMap<String, PieceType>, matrix: &Matrix, preview_count: usize) -> Piece {
+    /* Add more pieces to the queue if it is too small */
+    while piece_queue.len() <= preview_count {
         let mut new_bag = generate_bag(&piece_data);
-        new_bag.append(bag);
-        *bag = new_bag;
+        new_bag.append(piece_queue);
+        *piece_queue = new_bag;
     }
-    let new_piece = piece_data.get(&bag.pop().unwrap()).unwrap();
+    let new_piece = piece_data.get(&piece_queue.pop().unwrap()).unwrap();
     let mut piece = Piece::new(new_piece.shape.clone(), new_piece.color, new_piece.kick_table.clone(), new_piece.spin_bonus);
     piece.update_ghost(&matrix);
     piece
 }
 
 fn filled_rows(matrix: &mut Matrix) -> Vec<usize> {
-    let mut remove = Vec::new();
+    let mut cleared = Vec::new();
     for (i, row) in matrix.iter().enumerate() {
         let mut count = 0;
         for value in row.iter() {
@@ -296,10 +310,10 @@ fn filled_rows(matrix: &mut Matrix) -> Vec<usize> {
             count += 1;
         }
         if count == matrix[0].len() {
-            remove.push(i);
+            cleared.push(i);
         }
     }
-    remove
+    cleared
 }
 
 fn remove_rows(matrix: &mut Matrix, remove: Vec<usize>) {
@@ -316,17 +330,19 @@ fn remove_rows(matrix: &mut Matrix, remove: Vec<usize>) {
 }
 
 fn read_inputs(input: &Input) -> (MovementAction, RotationAction) {
-    let movement_action = match (input.hard_drop, input.instant_drop, input.left, input.right, input.shift_left, input.shift_right) {
-        (true, _, _, _, _, _) =>  {
-            return (MovementAction::HardDrop, RotationAction::None);
-        }
-        (_, true, _, _, _, _) =>  {
-            return (MovementAction::InstantDrop, RotationAction::None);
-        }
-        (_, _, _, _, true, false) => MovementAction::ShiftHorizontal(HDirection::Left),
-        (_, _, _, _, false, true) => MovementAction::ShiftHorizontal(HDirection::Right),
-        (_, _, true, false, _, _) => MovementAction::Horizontal(HDirection::Left),
-        (_, _, false, true, _, _) => MovementAction::Horizontal(HDirection::Right),
+    /* HardDrop and InstantDrop return to disallow rotation with those movements */
+    if input.hard_drop {
+        return (MovementAction::HardDrop, RotationAction::None);
+    }
+    if input.instant_drop {
+        return (MovementAction::InstantDrop, RotationAction::None);
+    }
+
+    let movement_action = match (input.left, input.right, input.shift_left, input.shift_right) {
+        (_, _, true, false) => MovementAction::ShiftHorizontal(HDirection::Left),
+        (_, _, false, true) => MovementAction::ShiftHorizontal(HDirection::Right),
+        (true, false, _, _) => MovementAction::Horizontal(HDirection::Left),
+        (false, true, _, _) => MovementAction::Horizontal(HDirection::Right),
         _ => MovementAction::None,
     };
 
@@ -339,6 +355,7 @@ fn read_inputs(input: &Input) -> (MovementAction, RotationAction) {
     (movement_action, rotation_action)
 }
 
+/* Checks that all kick tables in the piece data are found in the wall kick data */
 fn validate_data(piece_data: &HashMap<String, PieceType>, wall_kick_data: &HashMap<String, KickData>) -> Result<(), String> {
     for (piece_name, data) in piece_data.iter() {
         match wall_kick_data.get(&data.kick_table) {
