@@ -1,5 +1,6 @@
 "Key(W)" = "HardDrop"
-"Key(S)" = "SoftDrop"
+"Key(S)" = "InstantDrop"
+"Key(X)" = "SoftDrop"
 "Key(A)" = "Left"
 "Key(Q)" = "ShiftLeft"
 "Key(D)" = "Right"
@@ -10,7 +11,8 @@
 "Key(Left Shift)" = "Hold"
 
 "Btn(dpup)" = "HardDrop"
-"Btn(dpdown)" = "SoftDrop"
+"Btn(dpdown)" = "InstantDrop"
+"Btn(leftstick)" = "SoftDrop"
 "Btn(dpleft)" = "Left"
 "Btn(leftshoulder)" = "ShiftLeft"
 "Btn(dpright)" = "Right"

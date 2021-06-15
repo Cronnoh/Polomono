@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug)]
 pub struct Input {
     pub hard_drop: bool,
+    pub instant_drop: bool,
     pub soft_drop: bool,
     pub left: bool,
     pub shift_left: bool,
@@ -25,6 +26,7 @@ impl Input {
     pub fn new() -> Self {
         Self {
             hard_drop: false,
+            instant_drop: false,
             soft_drop: false,
             left: false,
             shift_left: false,
@@ -41,6 +43,7 @@ impl Input {
 #[derive(Serialize, Deserialize)]
 pub enum GameInput {
     HardDrop,
+    InstantDrop,
     SoftDrop,
     Left,
     ShiftLeft,
@@ -72,6 +75,7 @@ pub fn handle_input_event(input: &mut Input, event: Event, bindings: &HashMap<St
     match bindings.get(&button) {
         Some(x) => match x {
             GameInput::HardDrop => input.hard_drop = state,
+            GameInput::InstantDrop => input.instant_drop = state,
             GameInput::SoftDrop => input.soft_drop = state,
             GameInput::Left => input.left = state,
             GameInput::ShiftLeft => input.shift_left = state,

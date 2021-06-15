@@ -8,6 +8,7 @@ pub type Matrix = Vec<Vec<PieceColor>>;
 
 pub enum MovementAction {
     HardDrop,
+    InstantDrop,
     Horizontal(HDirection),
     ShiftHorizontal(HDirection),
     None,
@@ -100,6 +101,10 @@ impl Game {
                 input.hard_drop = false;
                 self.piece.hard_drop();
                 placed_piece = true;
+            }
+            MovementAction::InstantDrop => {
+                input.instant_drop = false;
+                self.piece.hard_drop();
             }
             MovementAction::Horizontal(direction) => {
                 self.handle_piece_movement(elapsed, direction);
@@ -309,14 +314,17 @@ fn remove_rows(matrix: &mut Matrix, remove: Vec<usize>) {
 }
 
 fn read_inputs(input: &Input) -> (MovementAction, RotationAction) {
-    let movement_action = match (input.hard_drop, input.left, input.right, input.shift_left, input.shift_right) {
-        (true, _, _, _, _) =>  {
+    let movement_action = match (input.hard_drop, input.instant_drop, input.left, input.right, input.shift_left, input.shift_right) {
+        (true, _, _, _, _, _) =>  {
             return (MovementAction::HardDrop, RotationAction::None);
         }
-        (_, _, _, true, false) => MovementAction::ShiftHorizontal(HDirection::Left),
-        (_, _, _, false, true) => MovementAction::ShiftHorizontal(HDirection::Right),
-        (_, true, false, _, _) => MovementAction::Horizontal(HDirection::Left),
-        (_, false, true, _, _) => MovementAction::Horizontal(HDirection::Right),
+        (_, true, _, _, _, _) =>  {
+            return (MovementAction::InstantDrop, RotationAction::None);
+        }
+        (_, _, _, _, true, false) => MovementAction::ShiftHorizontal(HDirection::Left),
+        (_, _, _, _, false, true) => MovementAction::ShiftHorizontal(HDirection::Right),
+        (_, _, true, false, _, _) => MovementAction::Horizontal(HDirection::Left),
+        (_, _, false, true, _, _) => MovementAction::Horizontal(HDirection::Right),
         _ => MovementAction::None,
     };
 
