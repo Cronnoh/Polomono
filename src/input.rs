@@ -72,8 +72,8 @@ pub fn handle_input_event(input: &mut Input, event: Event, bindings: &HashMap<St
         _ => { return }
     };
 
-    match bindings.get(&button) {
-        Some(x) => match x {
+    if let Some(x) = bindings.get(&button) {
+        match x {
             GameInput::HardDrop => input.hard_drop = state,
             GameInput::InstantDrop => input.instant_drop = state,
             GameInput::SoftDrop => input.soft_drop = state,
@@ -86,7 +86,6 @@ pub fn handle_input_event(input: &mut Input, event: Event, bindings: &HashMap<St
             GameInput::RotateCCW => input.rot_ccw = state,
             GameInput::Hold => input.hold = state,
         }
-        None => return,
     };
 }
 
@@ -96,21 +95,18 @@ pub fn open_game_controller(game_controller_subsystem: GameControllerSubsystem) 
         .map_err(|e| format!("can't enumerate joysticks: {}", e))?;
 
     // Iterate over all available joysticks and look for game controllers.
-    Ok((0..available)
-        .find_map(|id| {
-            if !game_controller_subsystem.is_game_controller(id) {
-                return None;
-            }
+    Ok((0..available).find_map(|id| {
+        if !game_controller_subsystem.is_game_controller(id) {
+            return None;
+        }
 
-            match game_controller_subsystem.open(id) {
-                Ok(c) => {
-                    // We managed to find and open a game controller,
-                    // exit the loop
-                    Some(c)
-                }
-                Err(_) => {
-                    None
-                }
+        match game_controller_subsystem.open(id) {
+            Ok(c) => {
+                // We managed to find and open a game controller,
+                // exit the loop
+                Some(c)
             }
-        }))
+            Err(_) => None,
+        }
+    }))
 }

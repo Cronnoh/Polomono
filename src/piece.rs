@@ -163,8 +163,8 @@ impl Piece {
             let row = (*rel_row + self.position.row) as usize;
             let col = (*rel_col + self.position.col) as usize;
             let mut fall_distance = 0;
-            for i in row..matrix.len() {
-                if matrix[i][col] != PieceColor::Empty {
+            for current_row in matrix.iter().skip(row) {
+                if current_row[col] != PieceColor::Empty {
                     break;
                 }
                 fall_distance += 1;

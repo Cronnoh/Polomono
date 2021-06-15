@@ -35,7 +35,7 @@ fn main() -> Result<(), String> {
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
     let _image_context = sdl2::image::init(InitFlag::PNG)?;
-    let game_controller_subsystem  = sdl_context.game_controller()?;
+    let game_controller_subsystem = sdl_context.game_controller()?;
     let _controller = input::open_game_controller(game_controller_subsystem)?;
 
     let ttf_context = sdl2::ttf::init()
@@ -112,7 +112,7 @@ fn block_texture_regions(texture: &Texture) -> Result<Vec<Rect>, String> {
     Ok(regions)
 }
 
-fn render(canvas: &mut WindowCanvas, texture: &mut Texture, regions: &Vec<Rect>, stat_textures: &mut Vec<Texture>, game: &game::Game) -> Result<(), String> {
+fn render(canvas: &mut WindowCanvas, texture: &mut Texture, regions: &[Rect], stat_textures: &mut Vec<Texture>, game: &game::Game) -> Result<(), String> {
     canvas.set_draw_color(Color::RGB(64, 64, 64));
     canvas.clear();
 
@@ -205,16 +205,17 @@ fn format_time(microseconds: u128) -> String {
 }
 
 fn create_stat_textures<'a, T>(stats: &game::Stats, font: &Font, texture_creator: &'a TextureCreator<T>) -> Result<Vec<Texture<'a>>, String> {
-    let mut textures = Vec::new();
-    textures.push(create_text_texture(&stats.score.to_string(), font, texture_creator)?);
-    textures.push(create_text_texture(&format_time(stats.time), font, texture_creator)?);
-    textures.push(create_text_texture(&stats.lines_cleared.to_string(), font, texture_creator)?);
-    textures.push(create_text_texture(&stats.pieces_placed.to_string(), font, texture_creator)?);
+    let textures = vec![
+        create_text_texture(&stats.score.to_string(), font, texture_creator)?,
+        create_text_texture(&format_time(stats.time), font, texture_creator)?,
+        create_text_texture(&stats.lines_cleared.to_string(), font, texture_creator)?,
+        create_text_texture(&stats.pieces_placed.to_string(), font, texture_creator)?,
+    ];
 
     Ok(textures)
 }
 
-fn create_text_texture<'a, T>(text: &String, font: &Font, texture_creator: &'a TextureCreator<T>) -> Result<Texture<'a>, String>{
+fn create_text_texture<'a, T>(text: &str, font: &Font, texture_creator: &'a TextureCreator<T>) -> Result<Texture<'a>, String>{
     let surface = font
         .render(text)
         .blended(Color::RGB(255, 255, 255))

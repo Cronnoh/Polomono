@@ -7,7 +7,7 @@ center matrix (E)
 randomizer options (M)
 --rebindable controls (M)
 --controller support (M)
-DAS keys (E)
+--DAS keys (E)
 
 --timer (E)
 --score (M)

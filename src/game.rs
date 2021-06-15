@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use rand::Rng;
 
-pub type Matrix = Vec<Vec<PieceColor>>;
+pub type Matrix = [Vec<PieceColor>];
 
 pub enum MovementAction {
     HardDrop,
@@ -22,7 +22,7 @@ pub struct Stats {
 }
 
 pub struct Game {
-    pub matrix: Matrix,
+    pub matrix: Vec<Vec<PieceColor>>,
     pub piece: Piece,
     pub held: Option<Piece>,
     pub piece_data: HashMap<String, PieceType>,
