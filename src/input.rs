@@ -20,6 +20,7 @@ pub struct Input {
     pub rot_180: bool,
     pub rot_ccw: bool,
     pub hold: bool,
+    pub reset: bool,
 }
 
 impl Input {
@@ -36,6 +37,7 @@ impl Input {
             rot_180: false,
             rot_ccw: false,
             hold: false,
+            reset: false,
         }
     }
 }
@@ -53,6 +55,7 @@ pub enum GameInput {
     Rotate180,
     RotateCCW,
     Hold,
+    Reset,
 }
 
 pub fn handle_input_event(input: &mut Input, event: Event, bindings: &HashMap<String, GameInput>) {
@@ -85,6 +88,7 @@ pub fn handle_input_event(input: &mut Input, event: Event, bindings: &HashMap<St
             GameInput::Rotate180 => input.rot_180 = state,
             GameInput::RotateCCW => input.rot_ccw = state,
             GameInput::Hold => input.hold = state,
+            GameInput::Reset => input.reset = state,
         }
     };
 }

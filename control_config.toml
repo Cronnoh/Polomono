@@ -9,6 +9,7 @@
 "Key(K)" = "Rotate180"
 "Key(J)" = "RotateCCW"
 "Key(Left Shift)" = "Hold"
+"Key(R)" = "Reset"
 
 "Btn(dpup)" = "HardDrop"
 "Btn(dpdown)" = "InstantDrop"
@@ -21,3 +22,4 @@
 "Btn(y)" = "Rotate180"
 "Btn(a)" = "RotateCCW"
 "Btn(x)" = "Hold"
+"Btn(back)" = "Reset"

@@ -76,16 +76,17 @@ fn main() -> Result<(), String> {
                 | Event::KeyDown { scancode: Some(Scancode::Escape), .. } => {
                     break 'running;
                 }
-                Event::KeyDown { scancode: Some(Scancode::R), repeat: false, ..}
-                | Event::ControllerButtonDown { button:sdl2::controller::Button::Back, .. } => {
-                    game = game::Game::new(&config)?;
-                }
-                Event::KeyDown{..} | Event::KeyUp{..}
+                Event::KeyDown{ repeat: false, ..} | Event::KeyUp{ repeat: false, ..}
                 | Event::ControllerButtonDown{..} | Event::ControllerButtonUp{..} => {
                     input::handle_input_event(&mut input, event, &bindings);
                 }
                 _ => {},
             }
+        }
+
+        if input.reset {
+            input.reset = false;
+            game = game::Game::new(&config)?;
         }
 
         game.update(&mut input, elapsed);
