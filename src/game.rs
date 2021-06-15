@@ -1,8 +1,7 @@
 use crate::piece::*;
 use crate::input::*;
+use crate::randomizer::*;
 use std::collections::HashMap;
-
-use rand::Rng;
 
 pub type Matrix = [Vec<PieceColor>];
 
@@ -29,6 +28,7 @@ pub struct Game {
     kick_data: HashMap<String, KickData>,
     piece_queue: Vec<String>,
     pub stats: Stats,
+    randomizer: Randomizer,
 
     das: u128, // Delayed Auto-Shift - Time in µs that left/right must be held before auto-shift begins
     arr: u128, // Auto-Repeat Rate - Time in µs the stays in each play during auto-shift
@@ -53,10 +53,18 @@ impl Game {
         let matrix = vec![vec![PieceColor::Empty; config.matrix_width]; config.matrix_height+crate::OFFSCREEN_ROWS];
         let piece_data = crate::load_data(std::path::Path::new("piece_data.toml"))?;
         let kick_data = crate::load_data(std::path::Path::new("wall_kick_data.toml"))?;
-        validate_data(&piece_data, &kick_data)?;
+        validate_data(&piece_data, &kick_data, &config.piece_list)?;
 
-        let mut piece_queue = generate_bag(&piece_data);
-        let piece = next_piece(&mut piece_queue, &piece_data, &matrix, config.preview_count);
+        // Generate the first group of pieces with the initial randomizer style, than change it
+        let starting_randomizer = match config.starting_randomizer {
+            Some(x) => x,
+            None => config.randomizer,
+        };
+        let mut randomizer = Randomizer::new(config.piece_list.clone(), starting_randomizer);
+        let mut piece_queue = randomizer.generate_pieces(&config.cannot_start_with);
+        randomizer.style = config.randomizer;
+        extend_queue(&mut piece_queue, config.preview_count, &randomizer);
+        let piece = next_piece(&mut piece_queue, &piece_data, &matrix);
 
         let stats = Stats {
             score: 0,
@@ -73,6 +81,7 @@ impl Game {
             kick_data,
             piece_queue,
             stats,
+            randomizer,
 
             // Config values are in milliseconds, must be converted to microseconds
             das: config.das as u128 * 1000,
@@ -160,7 +169,8 @@ impl Game {
             self.can_hold = true;
             self.stats.pieces_placed += 1;
             self.handle_line_clears(bonus);
-            self.piece = next_piece(&mut self.piece_queue, &self.piece_data, &self.matrix, self.preview_count);
+            extend_queue(&mut self.piece_queue, self.preview_count, &self.randomizer);
+            self.piece = next_piece(&mut self.piece_queue, &self.piece_data, &self.matrix);
         }
     }
 
@@ -228,7 +238,8 @@ impl Game {
                 std::mem::swap(&mut self.piece, held);
             }
             None => {
-                let next = next_piece(&mut self.piece_queue, &self.piece_data, &self.matrix, self.preview_count);
+                extend_queue(&mut self.piece_queue, self.preview_count, &self.randomizer);
+                let next = next_piece(&mut self.piece_queue, &self.piece_data, &self.matrix);
                 self.held = Some(std::mem::replace(&mut self.piece, next));
             }
         }
@@ -273,30 +284,22 @@ impl Game {
     }
 }
 
-fn generate_bag(piece_data: &HashMap<String, PieceType>) -> Vec<String> {
-    // Get all pieces from the list
-    let mut bag: Vec<String> = piece_data.keys().cloned().collect();
-
-    // Suffle the pieces
-    let mut rng = rand::thread_rng();
-    let len = bag.len();
-    for i in 0..len {
-        bag.swap(i, rng.gen_range(i..len));
-    }
-    bag
-}
-
-fn next_piece(piece_queue: &mut Vec<String>, piece_data: &HashMap<String, PieceType>, matrix: &Matrix, preview_count: usize) -> Piece {
-    /* Add more pieces to the queue if it is too small */
-    while piece_queue.len() <= preview_count {
-        let mut new_bag = generate_bag(&piece_data);
-        new_bag.append(piece_queue);
-        *piece_queue = new_bag;
-    }
-    let new_piece = piece_data.get(&piece_queue.pop().unwrap()).unwrap();
+fn next_piece(piece_queue: &mut Vec<String>, piece_data: &HashMap<String, PieceType>, matrix: &Matrix) -> Piece {
+    let new_piece = piece_data.get(&piece_queue.pop()
+        .expect("Popped from empty piece queue"))
+        .expect("Tried to get non-existant piece from piece_data");
     let mut piece = Piece::new(new_piece.shape.clone(), new_piece.color, new_piece.kick_table.clone(), new_piece.spin_bonus);
     piece.update_ghost(&matrix);
     piece
+}
+
+fn extend_queue(piece_queue: &mut Vec<String>, preview_count: usize, randomizer: &Randomizer) {
+    /* Add more pieces to the queue if it is too small */
+    while piece_queue.len() <= preview_count {
+        let mut new_bag = randomizer.generate_pieces(&None);
+        new_bag.append(piece_queue);
+        *piece_queue = new_bag;
+    }
 }
 
 fn filled_rows(matrix: &mut Matrix) -> Vec<usize> {
@@ -356,13 +359,24 @@ fn read_inputs(input: &Input) -> (MovementAction, RotationAction) {
 }
 
 /* Checks that all kick tables in the piece data are found in the wall kick data */
-fn validate_data(piece_data: &HashMap<String, PieceType>, wall_kick_data: &HashMap<String, KickData>) -> Result<(), String> {
+fn validate_data(piece_data: &HashMap<String, PieceType>, wall_kick_data: &HashMap<String, KickData>, piece_list: &[String]) -> Result<(), String> {
     for (piece_name, data) in piece_data.iter() {
         match wall_kick_data.get(&data.kick_table) {
             Some(_) => continue,
             None => {
                 return Err(
                     format!("Piece {} has kick table {} in piece_data.toml, but that table was not found in wall_kick_data.toml.", piece_name, data.kick_table)
+                );
+            }
+        }
+    }
+
+    for piece in piece_list.iter() {
+        match piece_data.get(piece) {
+            Some(_) => continue,
+            None => {
+                return Err(
+                    format!("Piece {} found in config.toml piece_list, be is not defined in piece_data.toml.", piece)
                 );
             }
         }

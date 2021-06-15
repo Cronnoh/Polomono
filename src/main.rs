@@ -1,6 +1,7 @@
 mod piece;
 mod game;
 mod input;
+mod randomizer;
 use input::GameInput;
 use piece::PieceColor;
 
@@ -29,6 +30,11 @@ pub struct Config {
     gravity: u32,
     lock_delay: u32,
     preview_count: usize,
+
+    piece_list: Vec<String>,
+    cannot_start_with: Option<Vec<String>>,
+    starting_randomizer: Option<randomizer::RandomizerStyle>,
+    randomizer: randomizer::RandomizerStyle,
 }
 
 fn main() -> Result<(), String> {

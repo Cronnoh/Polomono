@@ -7,6 +7,11 @@ gravity = 250
 lock_delay = 500
 preview_count = 5
 
+piece_list = ["I", "T", "O", "J", "L", "S", "Z", "M"]
+cannot_start_with = ["O", "S", "Z"]
+starting_randomizer = "DoubleNBag"
+randomizer = "NBag"
+
 # Controls
 # Hold Toggle
 # Hard drop toggle
