@@ -124,10 +124,12 @@ impl Game {
                 input.rot_cw = false;
                 input.rot_180 = false;
                 input.rot_ccw = false;
-                self.piece.rotate(&self.matrix, &self.kick_data, rotation_action);
+                if self.piece.rotate(&self.matrix, &self.kick_data, rotation_action) {
+                    self.lock_timer = std::cmp::max(0, self.lock_timer as i128 - self.lock_delay as i128/4) as u128;
+                }
             }
         }
-
+        
         if input.soft_drop {
             gravity /= 4;
             self.gravity_timer = std::cmp::min(self.gravity_timer, gravity);
