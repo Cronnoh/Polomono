@@ -142,7 +142,7 @@ fn render(canvas: &mut WindowCanvas, texture: &mut Texture, regions: &[Rect], st
 
     // Draw ghost piece outline
     canvas.set_draw_color(Color::RGB(255, 255, 255));
-    for (row, col) in game.piece.get_orientation().iter() {
+    for (col, row) in game.piece.get_orientation().iter() {
         let ghost_x = (*col + game.piece.position.col) as i32 * SCALE as i32;
         let ghost_y = ((*row + game.piece.ghost_position) as i32 - OFFSCREEN_ROWS as i32) * SCALE as i32;
         canvas.fill_rect(Rect::new(ghost_x-2, ghost_y-2, SCALE+4, SCALE+4))?;
@@ -150,7 +150,7 @@ fn render(canvas: &mut WindowCanvas, texture: &mut Texture, regions: &[Rect], st
 
     // Draw ghost piece
     texture.set_alpha_mod(192);
-    for (row, col) in game.piece.get_orientation().iter() {
+    for (col, row) in game.piece.get_orientation().iter() {
         let ghost_x = (*col + game.piece.position.col) as i32 * SCALE as i32;
         let ghost_y = ((*row + game.piece.ghost_position) as i32 - OFFSCREEN_ROWS as i32) * SCALE as i32;
         canvas.copy(&texture, regions[game.piece.color as usize], Rect::new(ghost_x, ghost_y, SCALE, SCALE))?;
@@ -158,7 +158,7 @@ fn render(canvas: &mut WindowCanvas, texture: &mut Texture, regions: &[Rect], st
 
     // Draw piece
     texture.set_alpha_mod(255);
-    for (row, col) in game.piece.get_orientation().iter() {
+    for (col, row) in game.piece.get_orientation().iter() {
         let x = (*col + game.piece.position.col) as i32 * SCALE as i32;
         let y = ((*row + game.piece.position.row) as i32 - OFFSCREEN_ROWS as i32) * SCALE as i32;
         canvas.copy(&texture, regions[game.piece.color as usize], Rect::new(x, y, SCALE, SCALE))?;
@@ -171,7 +171,7 @@ fn render(canvas: &mut WindowCanvas, texture: &mut Texture, regions: &[Rect], st
 
     for (i, piece) in game.get_preview_pieces().iter().rev().enumerate() {
         let next_piece = game.piece_data.get(piece).unwrap();
-        for (row, col) in next_piece.shape[0].iter() {
+        for (col, row) in next_piece.shape[0].iter() {
             let x = *col as i32 * size as i32 + preview_offset_x;
             let y = *row as i32 * size as i32 + preview_piece_seperation * i as i32 + preview_offset_y;
             canvas.copy(&texture, regions[next_piece.color as usize], Rect::new(x, y, size as u32, size as u32))?;
@@ -179,7 +179,7 @@ fn render(canvas: &mut WindowCanvas, texture: &mut Texture, regions: &[Rect], st
     }
 
     if let Some(held) = &game.held {
-        for (row, col) in held.get_orientation().iter() {
+        for (col, row) in held.get_orientation().iter() {
             let x = *col as i32 * size as i32 + preview_offset_x;
             let y = *row as i32 * size as i32 + preview_offset_y + 500;
             canvas.copy(&texture, regions[held.color as usize], Rect::new(x, y, size as u32, size as u32))?;

@@ -17,7 +17,7 @@ center matrix (E)
 combos (M)
 --losing (M)
 
-convert pieces to [col, row] (B)
+--convert pieces to [col, row] (B)
 ARS pieces/kicks (B)
 ARE, IRS, IHS (M)
 

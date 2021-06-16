@@ -84,9 +84,9 @@ impl Piece {
         Returns true is a collision would occur and false otherwise.
     */
     fn check_collision(&self, matrix: &Matrix, h_dir: i8, v_dir: i8, rotation: usize) -> bool {
-        for (rel_row, rel_col) in self.shape[rotation].iter() {
-            let row = (*rel_row + self.position.row + v_dir) as usize;
+        for (rel_col, rel_row) in self.shape[rotation].iter() {
             let col = (*rel_col + self.position.col + h_dir) as usize;
+            let row = (*rel_row + self.position.row + v_dir) as usize;
             // If col is < 0 the the cast to usize makes it large so the first check handles out of bounds both left and right
             if col >= matrix[0].len() || row >= matrix.len() || matrix[row][col] != PieceColor::Empty {
                 return true;
@@ -150,18 +150,18 @@ impl Piece {
     }
 
     pub fn lock(&self, matrix: &mut Matrix) {
-        for (rel_row, rel_col) in self.shape[self.rotation].iter() {
-            let row = (*rel_row + self.position.row) as usize;
+        for (rel_col, rel_row) in self.get_orientation().iter() {
             let col = (*rel_col + self.position.col) as usize;
+            let row = (*rel_row + self.position.row) as usize;
             matrix[row][col] = self.color;
         }
     }
 
     pub fn update_ghost(&mut self, matrix: &Matrix) {
         let mut min_fall_distance = matrix.len();
-        for (rel_row, rel_col) in self.shape[self.rotation].iter() {
-            let row = (*rel_row + self.position.row) as usize;
+        for (rel_col, rel_row) in self.get_orientation().iter() {
             let col = (*rel_col + self.position.col) as usize;
+            let row = (*rel_row + self.position.row) as usize;
             let mut fall_distance = 0;
             for current_row in matrix.iter().skip(row) {
                 if current_row[col] != PieceColor::Empty {
