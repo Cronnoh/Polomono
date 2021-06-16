@@ -33,8 +33,8 @@ impl Randomizer {
             RandomizerStyle::DoubleNBag => new_pieces = self.double_n_bag(),
             RandomizerStyle::Minus1Bag => new_pieces = self.minus_1_bag(),
             RandomizerStyle::FullRandom => new_pieces = self.full_random(),
-            RandomizerStyle::Classic => new_pieces = self.n_bag(),
-            RandomizerStyle::Streak => new_pieces = self.n_bag(),
+            RandomizerStyle::Classic => new_pieces = self.classic(),
+            RandomizerStyle::Streak => new_pieces = self.streak(),
         }
         if let Some(disallowed) = cannot_start_with {
             fix_starting_piece(&mut new_pieces, disallowed);
@@ -91,6 +91,32 @@ impl Randomizer {
 
         pieces
     }
+
+    fn classic(&mut self) -> Vec<String> {
+        let mut pieces = self.full_random();
+        let mut rng = rand::thread_rng();
+
+        // If the piece is the same as the previous piece reroll it once
+        if let Some(prev) = &self.remembered_piece {
+            if pieces[0] == *prev {
+                pieces[0] = self.piece_list[rng.gen_range(0..self.piece_list.len())].clone();
+            }
+        }
+        for i in 1..pieces.len() {
+            if pieces[i] == pieces[i-1] {
+                pieces[i] = self.piece_list[rng.gen_range(0..self.piece_list.len())].clone();
+            }
+        }
+        self.remembered_piece = Some(pieces[pieces.len()-1].clone());
+        pieces
+    }
+
+    fn streak(&mut self) -> Vec<String>{
+        let mut rng = rand::thread_rng();
+        let piece = self.piece_list[rng.gen_range(0..self.piece_list.len())].clone();
+        let count = rng.gen_range(2..6);
+        vec![piece; count]
+    }
 }
 
 fn randomize<T>(bag: &mut [T]) {
@@ -101,7 +127,7 @@ fn randomize<T>(bag: &mut [T]) {
     }
 }
 
-fn fix_starting_piece(list: &mut Vec<String>, disallowed: &Vec<String>) {
+fn fix_starting_piece(list: &mut Vec<String>, disallowed: &[String]) {
     let len = list.len();
     if disallowed.contains(&list[len-1]) {
         for i in (0..len-2).rev() {
