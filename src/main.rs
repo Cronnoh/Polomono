@@ -3,7 +3,7 @@ mod game;
 mod input;
 mod randomizer;
 use input::GameInput;
-use piece::PieceColor;
+use piece::{Piece, PieceColor};
 
 use std::{collections::HashMap, path::Path, time::Instant};
 
@@ -11,14 +11,13 @@ use sdl2::{
     event::Event,
     image::{InitFlag, LoadTexture},
     keyboard::Scancode, pixels::Color,
-    rect::Rect,
+    rect::{Rect, Point},
     render::{WindowCanvas, Texture, BlendMode, TextureCreator},
     ttf::Font,
 };
 use serde::{Deserialize, de::DeserializeOwned};
 
 const OFFSCREEN_ROWS: usize = 5;
-const SCALE: u32 = 32;
 
 #[derive(Deserialize)]
 pub struct Config {
@@ -48,7 +47,7 @@ fn main() -> Result<(), String> {
         .map_err(|e| e.to_string())?;
 
     let window = video_subsystem
-        .window("idk", 1184, 666)
+        .window("idk", 1280, 720)
         .build()
         .map_err(|e| e.to_string())?;
 
@@ -57,12 +56,15 @@ fn main() -> Result<(), String> {
         .build()
         .map_err(|e| e.to_string())?;
 
+    canvas.set_logical_size(640, 360)
+        .map_err(|e| e.to_string())?;
+
     let texture_creator = canvas.texture_creator();
     let mut blocks_texture = texture_creator.load_texture("assets/tet.png")?;
     blocks_texture.set_blend_mode(BlendMode::Blend);
     let blocks_regions = block_texture_regions(&blocks_texture)?;
 
-    let font = ttf_context.load_font("assets/Hack-Bold.ttf", 48)?;
+    let font = ttf_context.load_font("assets/Hack-Bold.ttf", 24)?;
 
     let config: Config = load_data(Path::new("config.toml"))?;
     let bindings: HashMap<String, GameInput> = load_data(Path::new("control_config.toml"))?;
@@ -123,81 +125,96 @@ fn render(canvas: &mut WindowCanvas, texture: &mut Texture, regions: &[Rect], st
     canvas.set_draw_color(Color::RGB(64, 64, 64));
     canvas.clear();
 
-    // let (width, height) = canvas.output_size()?;
-    // let canvas_center = Point::new(width as i32 / 2, height as i32 / 2);
+    let grid_square_size = 16;
+    let matrix_offset = Point::new(168, 16);
 
     texture.set_alpha_mod(255);
-    for (i, row) in game.matrix.iter().enumerate().skip(OFFSCREEN_ROWS) {
+    for (i, row) in game.matrix.iter().skip(OFFSCREEN_ROWS).enumerate() {
         for (j, color) in row.iter().enumerate() {
-            let x = (j as u32 * SCALE) as i32;
-            let y = ((i as u32 - OFFSCREEN_ROWS as u32)* SCALE) as i32;
-            canvas.copy(&texture, regions[*color as usize], Rect::new(x, y, SCALE, SCALE))?;
+            let point = Point::new(j as i32, i as i32) * grid_square_size as i32 + matrix_offset;
+            canvas.copy(&texture, regions[*color as usize], Rect::new(point.x, point.y, grid_square_size, grid_square_size))?;
         }
     }
 
-    /* 
+    draw_piece(canvas, &game.piece, grid_square_size, matrix_offset, texture, &regions)?;
+
+    canvas.set_draw_color(Color::RGB(96, 96, 96));
+    let preview_offset_x = matrix_offset.x + (game.matrix[0].len() as i32 + 1) * grid_square_size as i32;
+    let preview_offset_y = 16;
+    let preview_piece_seperation = 4 * (grid_square_size/2) as i32;
+    let hold_offset_x = 112;
+    let size = grid_square_size/2;
+
+    for (i, piece) in game.get_preview_pieces().iter().rev().enumerate() {
+        let next_piece = game.piece_data.get(piece).unwrap();
+        canvas.set_draw_color(Color::RGB(96, i as u8*20, 96));
+        canvas.fill_rect(Rect::new(preview_offset_x, preview_piece_seperation * i as i32 + preview_offset_y, 48, 48))?;
+        for (col, row) in next_piece.shape[0].iter() {
+            let x = *col as i32 * size as i32 + preview_offset_x;
+            let y = *row as i32 * size as i32 + preview_piece_seperation * i as i32 + preview_offset_y;
+            canvas.copy(&texture, regions[next_piece.color as usize], Rect::new(x, y, size, size))?;
+        }
+    }
+
+    canvas.fill_rect(Rect::new(hold_offset_x, preview_offset_y, 48, 48))?;
+    if let Some(held) = &game.held {
+        for (col, row) in held.get_orientation().iter() {
+            let x = *col as i32 * size as i32 + hold_offset_x;
+            let y = *row as i32 * size as i32 + preview_offset_y;
+            canvas.copy(&texture, regions[held.color as usize], Rect::new(x, y, size, size))?;
+        }
+    }
+
+    let vertical_stat_spacing = 20;
+    for (i, texture) in stat_textures.iter_mut().enumerate() {
+        let query = texture.query();
+        let pos_x = preview_offset_x;
+        let pos_y = vertical_stat_spacing * i as i32 + matrix_offset.y + (15 * grid_square_size as i32);
+        texture.set_color_mod(96, 96, 96);
+        canvas.copy(&texture, None, Rect::new(pos_x+1, pos_y+1, query.width, query.height))?;
+        texture.set_color_mod(255, 255, 255);
+        canvas.copy(&texture, None, Rect::new(pos_x, pos_y, query.width, query.height))?;
+    }
+
+    canvas.present();
+
+    Ok(())
+}
+
+fn get_grid_position(column: i8, row: i8, grid_square_size: u32, matrix_offset: Point) -> Point {
+    let x = column as i32 * grid_square_size as i32 + matrix_offset.x;
+    let y = row as i32 * grid_square_size as i32 + matrix_offset.y;
+
+    Point::new(x, y)
+}
+
+fn draw_piece(canvas: &mut WindowCanvas, piece: &Piece, grid_square_size: u32, matrix_offset: Point, texture: &mut Texture, regions: &[Rect]) -> Result<(), String> {
+    /*
     Ghost Piece is drawn transparently over a white background to brighten it up and create an outline.
     The regular piece is draw afterward so that it is on top when it intersects with the ghost piece.
     */
 
     // Draw ghost piece outline
     canvas.set_draw_color(Color::RGB(255, 255, 255));
-    for (col, row) in game.piece.get_orientation().iter() {
-        let ghost_x = (*col + game.piece.position.col) as i32 * SCALE as i32;
-        let ghost_y = ((*row + game.piece.ghost_position) as i32 - OFFSCREEN_ROWS as i32) * SCALE as i32;
-        canvas.fill_rect(Rect::new(ghost_x-2, ghost_y-2, SCALE+4, SCALE+4))?;
+    texture.set_alpha_mod(255);
+    for (col, row) in piece.get_orientation().iter() {
+        let pos = get_grid_position(*col + piece.position.col, *row + piece.ghost_position - OFFSCREEN_ROWS as i8, grid_square_size, matrix_offset);
+        canvas.fill_rect(Rect::new(pos.x-1, pos.y-1, grid_square_size+2, grid_square_size+2))?;
     }
 
     // Draw ghost piece
     texture.set_alpha_mod(192);
-    for (col, row) in game.piece.get_orientation().iter() {
-        let ghost_x = (*col + game.piece.position.col) as i32 * SCALE as i32;
-        let ghost_y = ((*row + game.piece.ghost_position) as i32 - OFFSCREEN_ROWS as i32) * SCALE as i32;
-        canvas.copy(&texture, regions[game.piece.color as usize], Rect::new(ghost_x, ghost_y, SCALE, SCALE))?;
+    for (col, row) in piece.get_orientation().iter() {
+        let pos = get_grid_position(*col + piece.position.col, *row + piece.ghost_position - OFFSCREEN_ROWS as i8, grid_square_size, matrix_offset);
+        canvas.copy(&texture, regions[piece.color as usize], Rect::new(pos.x, pos.y, grid_square_size, grid_square_size))?;
     }
 
     // Draw piece
     texture.set_alpha_mod(255);
-    for (col, row) in game.piece.get_orientation().iter() {
-        let x = (*col + game.piece.position.col) as i32 * SCALE as i32;
-        let y = ((*row + game.piece.position.row) as i32 - OFFSCREEN_ROWS as i32) * SCALE as i32;
-        canvas.copy(&texture, regions[game.piece.color as usize], Rect::new(x, y, SCALE, SCALE))?;
+    for (col, row) in piece.get_orientation().iter() {
+        let pos = get_grid_position(*col + piece.position.col, *row + piece.position.row - OFFSCREEN_ROWS as i8, grid_square_size, matrix_offset);
+        canvas.copy(&texture, regions[piece.color as usize], Rect::new(pos.x, pos.y, grid_square_size, grid_square_size))?;
     }
-
-    let preview_offset_x = 350;
-    let preview_offset_y = 100;
-    let preview_piece_seperation = 50;
-    let size = (SCALE/2) as i32;
-
-    for (i, piece) in game.get_preview_pieces().iter().rev().enumerate() {
-        let next_piece = game.piece_data.get(piece).unwrap();
-        for (col, row) in next_piece.shape[0].iter() {
-            let x = *col as i32 * size as i32 + preview_offset_x;
-            let y = *row as i32 * size as i32 + preview_piece_seperation * i as i32 + preview_offset_y;
-            canvas.copy(&texture, regions[next_piece.color as usize], Rect::new(x, y, size as u32, size as u32))?;
-        }
-    }
-
-    if let Some(held) = &game.held {
-        for (col, row) in held.get_orientation().iter() {
-            let x = *col as i32 * size as i32 + preview_offset_x;
-            let y = *row as i32 * size as i32 + preview_offset_y + 500;
-            canvas.copy(&texture, regions[held.color as usize], Rect::new(x, y, size as u32, size as u32))?;
-        }
-    }
-
-    let vertical_stat_spacing = 60;
-    for (i, texture) in stat_textures.iter_mut().enumerate() {
-        let query = texture.query();
-        let pos_x = 500;
-        let pos_y = 300 + vertical_stat_spacing * i as i32;
-        texture.set_color_mod(96, 96, 96);
-        canvas.copy(&texture, None, Rect::new(pos_x+2, pos_y+2, query.width, query.height))?;
-        texture.set_color_mod(255, 255, 255);
-        canvas.copy(&texture, None, Rect::new(pos_x, pos_y, query.width, query.height))?;
-    }
-
-    canvas.present();
 
     Ok(())
 }
