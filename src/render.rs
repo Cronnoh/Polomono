@@ -17,6 +17,7 @@ pub struct Assets<'a, 'b> {
     block_sheet: Option<Texture<'a>>,
     block_sprites: Option<Vec<Rect>>,
     font: Option<Font<'a, 'b>>,
+    frame: Option<Texture<'a>>,
 }
 
 impl<'a, 'b> Assets<'a, 'b> {
@@ -25,6 +26,7 @@ impl<'a, 'b> Assets<'a, 'b> {
             block_sheet: None,
             block_sprites: None,
             font: None,
+            frame: None,
         }
     }
 
@@ -39,6 +41,11 @@ impl<'a, 'b> Assets<'a, 'b> {
 
     pub fn load_font(&mut self, ttf_context: &'a Sdl2TtfContext, path: &Path) -> Result<(), String> {
         self.font = Some(ttf_context.load_font(path, 24)?);
+        Ok(())
+    }
+
+    pub fn load_frame(&mut self, texture_creator: &'a TextureCreator<WindowContext>, path: &Path) -> Result<(), String> {
+        self.frame = Some(texture_creator.load_texture(path)?);
         Ok(())
     }
 
@@ -60,6 +67,13 @@ impl<'a, 'b> Assets<'a, 'b> {
             Some(x) => Ok(x),
             None => Err("Font is not loaded".to_string()),
         }
+    }
+
+    fn get_frame(&self) -> Result<&Texture, String>{
+        match &self.frame {
+            Some(x) => Ok(x),
+            None => Err("Frame is not loaded".to_string()),
+        } 
     }
 
     fn create_stat_textures(&self, stats: &crate::game::Stats, texture_creator: &'a TextureCreator<WindowContext>) -> Result<Vec<Texture<'a>>, String> {
@@ -87,6 +101,7 @@ pub fn render(canvas: &mut WindowCanvas, game: &Game, assets: &mut Assets) -> Re
     draw_preview(canvas, game, grid_square_size, &block_assets)?;
     draw_held(canvas, game, grid_square_size, &block_assets)?;
     draw_stats(canvas, &game.stats, assets)?;
+    draw_frame(canvas, assets)?;
 
     canvas.present();
     Ok(())
@@ -120,22 +135,28 @@ fn draw_piece(canvas: &mut WindowCanvas, piece: &crate::piece::Piece, grid_squar
     canvas.set_draw_color(Color::RGB(255, 255, 255));
     block_sheet.set_alpha_mod(255);
     for (col, row) in piece.get_orientation().iter() {
-        let pos = get_grid_position(*col + piece.position.col, *row + piece.ghost_position - OFFSCREEN_ROWS as i8, grid_square_size, matrix_offset);
-        canvas.fill_rect(Rect::new(pos.x-1, pos.y-1, grid_square_size+2, grid_square_size+2))?;
+        if *row + piece.ghost_position >= OFFSCREEN_ROWS as i8 {
+            let pos = get_grid_position(*col + piece.position.col, *row + piece.ghost_position - OFFSCREEN_ROWS as i8, grid_square_size, matrix_offset);
+            canvas.fill_rect(Rect::new(pos.x-1, pos.y-1, grid_square_size+2, grid_square_size+2))?;
+        }
     }
 
     // Draw ghost piece
     block_sheet.set_alpha_mod(192);
     for (col, row) in piece.get_orientation().iter() {
-        let pos = get_grid_position(*col + piece.position.col, *row + piece.ghost_position - OFFSCREEN_ROWS as i8, grid_square_size, matrix_offset);
-        canvas.copy(block_sheet, block_sprites[piece.color as usize], Rect::new(pos.x, pos.y, grid_square_size, grid_square_size))?;
+        if *row + piece.ghost_position >= OFFSCREEN_ROWS as i8 {
+            let pos = get_grid_position(*col + piece.position.col, *row + piece.ghost_position - OFFSCREEN_ROWS as i8, grid_square_size, matrix_offset);
+            canvas.copy(block_sheet, block_sprites[piece.color as usize], Rect::new(pos.x, pos.y, grid_square_size, grid_square_size))?;
+        }
     }
 
     // Draw piece
     block_sheet.set_alpha_mod(255);
     for (col, row) in piece.get_orientation().iter() {
-        let pos = get_grid_position(*col + piece.position.col, *row + piece.position.row - OFFSCREEN_ROWS as i8, grid_square_size, matrix_offset);
-        canvas.copy(block_sheet, block_sprites[piece.color as usize], Rect::new(pos.x, pos.y, grid_square_size, grid_square_size))?;
+        if *row + piece.position.row >= OFFSCREEN_ROWS as i8 {
+            let pos = get_grid_position(*col + piece.position.col, *row + piece.position.row - OFFSCREEN_ROWS as i8, grid_square_size, matrix_offset);
+            canvas.copy(block_sheet, block_sprites[piece.color as usize], Rect::new(pos.x, pos.y, grid_square_size, grid_square_size))?;
+        }
     }
 
     Ok(())
@@ -146,13 +167,12 @@ fn draw_preview(canvas: &mut WindowCanvas, game: &Game, grid_square_size: u32, a
     canvas.set_draw_color(Color::RGB(96, 96, 96));
     let preview_offset_x = 336;
     let preview_offset_y = 16;
-    let preview_piece_seperation = 4 * (grid_square_size/2) as i32;
+    let preview_piece_seperation = 48;
     let size = grid_square_size/2;
 
     for (i, piece) in game.get_preview_pieces().iter().rev().enumerate() {
         let next_piece = game.piece_data.get(piece).unwrap();
         canvas.set_draw_color(Color::RGB(96, i as u8*20, 96));
-        canvas.fill_rect(Rect::new(preview_offset_x, preview_piece_seperation * i as i32 + preview_offset_y, 48, 48))?;
         for (col, row) in next_piece.shape[0].iter() {
             let x = *col as i32 * size as i32 + preview_offset_x;
             let y = *row as i32 * size as i32 + preview_piece_seperation * i as i32 + preview_offset_y;
@@ -168,7 +188,6 @@ fn draw_held(canvas: &mut WindowCanvas, game: &Game, grid_square_size: u32, asse
     let (block_sheet, block_sprites) = assets;
     let size = grid_square_size/2;
 
-    canvas.fill_rect(Rect::new(hold_offset_x, hold_offset_y, 48, 48))?;
     if let Some(held) = &game.held {
         for (col, row) in held.get_orientation().iter() {
             let x = *col as i32 * size as i32 + hold_offset_x;
@@ -187,7 +206,7 @@ fn draw_stats(canvas: &mut WindowCanvas, stats: &crate::game::Stats, assets: &mu
     
     for (i, texture) in stat_textures.iter_mut().enumerate() {
         let query = texture.query();
-        let pos_x = 336;
+        let pos_x = 440;
         let pos_y = stats_offset_y + vertical_stat_spacing * i as i32;
         texture.set_color_mod(96, 96, 96);
         canvas.copy(&texture, None, Rect::new(pos_x+1, pos_y+1, query.width, query.height))?;
@@ -196,6 +215,14 @@ fn draw_stats(canvas: &mut WindowCanvas, stats: &crate::game::Stats, assets: &mu
     }
 
     Ok(())
+}
+
+fn draw_frame(canvas: &mut WindowCanvas, assets: &Assets) -> Result<(), String> {
+    let frame_x = 104;
+    let frame_y = 8;
+    let texture = assets.get_frame()?;
+    let query = texture.query();
+    canvas.copy(texture, None, Rect::new(frame_x, frame_y, query.width, query.height))
 }
 
 fn block_texture_regions(texture: &Texture) -> Result<Vec<Rect>, String> {

@@ -60,6 +60,7 @@ fn main() -> Result<(), String> {
     let mut assets = render::Assets::new();
     assets.load_block_textures(&texture_creator, Path::new("assets/blocks.png"))?;
     assets.load_font(&ttf_context, Path::new("assets/Hack-Bold.ttf"))?;
+    assets.load_frame(&texture_creator, Path::new("assets/frame.png"))?;
 
     let config: Config = load_data(Path::new("config.toml"))?;
     let bindings: HashMap<String, GameInput> = load_data(Path::new("control_config.toml"))?;
