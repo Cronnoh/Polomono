@@ -269,7 +269,7 @@ impl Game {
     /* Lose is the piece is placed entirely offscreen */
     fn check_loss(&self) -> bool {
         let mut lowest = 0;
-        for (row, _) in self.piece.get_orientation().iter() {
+        for (_, row) in self.piece.get_orientation().iter() {
             // Max because down is positive
             lowest = std::cmp::max(lowest, row + self.piece.position.row);
         }
