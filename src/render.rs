@@ -16,7 +16,8 @@ use sdl2::{
 pub struct Assets<'a, 'b> {
     block_sheet: Option<Texture<'a>>,
     block_sprites: Option<Vec<Rect>>,
-    font: Option<Font<'a, 'b>>,
+    stat_font: Option<Font<'a, 'b>>,
+    stat_labels: Option<Vec<Texture<'a>>>,
     frame: Option<Texture<'a>>,
 }
 
@@ -25,7 +26,8 @@ impl<'a, 'b> Assets<'a, 'b> {
         Self {
             block_sheet: None,
             block_sprites: None,
-            font: None,
+            stat_font: None,
+            stat_labels: None,
             frame: None,
         }
     }
@@ -39,8 +41,17 @@ impl<'a, 'b> Assets<'a, 'b> {
         Ok(())
     }
 
-    pub fn load_font(&mut self, ttf_context: &'a Sdl2TtfContext, path: &Path) -> Result<(), String> {
-        self.font = Some(ttf_context.load_font(path, 24)?);
+    pub fn load_font(&mut self, ttf_context: &'a Sdl2TtfContext, texture_creator: &'a TextureCreator<WindowContext>, path: &Path) -> Result<(), String> {
+        self.stat_font = Some(ttf_context.load_font(path, 28)?);
+        let label_font = ttf_context.load_font(path, 18)?;
+        let label_color = Color::RGB(144, 144, 144);
+        self.stat_labels = Some(vec![
+            create_text_texture("Score", label_color, &label_font, &texture_creator)?,
+            create_text_texture("Time", label_color, &label_font, &texture_creator)?,
+            create_text_texture("Lines", label_color, &label_font, &texture_creator)?,
+            create_text_texture("Pieces", label_color, &label_font, &texture_creator)?,
+        ]);
+
         Ok(())
     }
 
@@ -63,9 +74,16 @@ impl<'a, 'b> Assets<'a, 'b> {
     }
 
     fn get_font(&self) -> Result<&Font, String> {
-        match &self.font {
+        match &self.stat_font {
             Some(x) => Ok(x),
             None => Err("Font is not loaded".to_string()),
+        }
+    }
+
+    fn get_stat_labels(&self) -> Result<&Vec<Texture>, String> {
+        match &self.stat_labels {
+            Some(x) => Ok(x),
+            None => Err("Stat labels not loaded".to_string()),
         }
     }
 
@@ -78,11 +96,12 @@ impl<'a, 'b> Assets<'a, 'b> {
 
     fn create_stat_textures(&self, stats: &crate::game::Stats, texture_creator: &'a TextureCreator<WindowContext>) -> Result<Vec<Texture<'a>>, String> {
         let font = self.get_font()?;
+        let color = Color::RGB(255, 255, 255);
         let textures = vec![
-            create_text_texture(&stats.score.to_string(), font, &texture_creator)?,
-            create_text_texture(&format_time(stats.time), font, &texture_creator)?,
-            create_text_texture(&stats.lines_cleared.to_string(), font, &texture_creator)?,
-            create_text_texture(&stats.pieces_placed.to_string(), font, &texture_creator)?,
+            create_text_texture(&stats.score.to_string(), color, font, &texture_creator)?,
+            create_text_texture(&format_time(stats.time), color, font, &texture_creator)?,
+            create_text_texture(&stats.lines_cleared.to_string(), color, font, &texture_creator)?,
+            create_text_texture(&stats.pieces_placed.to_string(), color, font, &texture_creator)?,
         ];
 
         Ok(textures)
@@ -201,17 +220,23 @@ fn draw_held(canvas: &mut WindowCanvas, game: &Game, grid_square_size: u32, asse
 fn draw_stats(canvas: &mut WindowCanvas, stats: &crate::game::Stats, assets: &mut Assets) -> Result<(), String> {
     let texture_creator = canvas.texture_creator();
     let mut stat_textures = assets.create_stat_textures(&stats, &texture_creator)?;
-    let stats_offset_y = 220;
-    let vertical_stat_spacing = 25;
-    
-    for (i, texture) in stat_textures.iter_mut().enumerate() {
-        let query = texture.query();
-        let pos_x = 440;
-        let pos_y = stats_offset_y + vertical_stat_spacing * i as i32;
-        texture.set_color_mod(96, 96, 96);
-        canvas.copy(&texture, None, Rect::new(pos_x+1, pos_y+1, query.width, query.height))?;
-        texture.set_color_mod(255, 255, 255);
-        canvas.copy(&texture, None, Rect::new(pos_x, pos_y, query.width, query.height))?;
+    let stats_offset_x = 440;
+    let stats_offset_y = 28;
+    let label_number_spacing = 18;
+    let vertical_stat_spacing = 75;
+    let labels = assets.get_stat_labels()?;
+
+    for (i, (number, label)) in stat_textures.iter_mut().zip(labels).enumerate() {
+        let label_query = label.query();
+        let label_y = stats_offset_y + vertical_stat_spacing * i as i32;
+        canvas.copy(&label, None, Rect::new(stats_offset_x, label_y, label_query.width, label_query.height))?;
+
+        let query = number.query();
+        let number_y = label_y + label_number_spacing;
+        number.set_color_mod(96, 96, 96);
+        canvas.copy(&number, None, Rect::new(stats_offset_x+1, number_y+1, query.width, query.height))?;
+        number.set_color_mod(255, 255, 255);
+        canvas.copy(&number, None, Rect::new(stats_offset_x, number_y, query.width, query.height))?;
     }
 
     Ok(())
@@ -240,10 +265,10 @@ fn block_texture_regions(texture: &Texture) -> Result<Vec<Rect>, String> {
     Ok(regions)
 }
 
-fn create_text_texture<'a, T>(text: &str, font: &Font, texture_creator: &'a TextureCreator<T>) -> Result<Texture<'a>, String>{
+fn create_text_texture<'a, T>(text: &str, color: Color, font: &Font, texture_creator: &'a TextureCreator<T>) -> Result<Texture<'a>, String>{
     let surface = font
         .render(text)
-        .blended(Color::RGB(255, 255, 255))
+        .blended(color)
         .map_err(|e| e.to_string())?;
     texture_creator.create_texture_from_surface(&surface)
         .map_err(|e| e.to_string())
