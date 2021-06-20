@@ -51,8 +51,8 @@ pub struct PieceType {
 }
 
 pub struct Position {
-    pub row: i8,
-    pub col: i8,
+    pub row: i32,
+    pub col: i32,
 }
 
 pub struct Piece {
@@ -61,7 +61,7 @@ pub struct Piece {
     pub color: PieceColor,
     kick_table: String,
     rotation: usize,
-    pub ghost_position: i8,
+    pub ghost_position: i32,
     spin_bonus: bool,
     last_move_was_rotation: bool,
 }
@@ -83,10 +83,10 @@ impl Piece {
     /* Check if the given movement and rotation would cause a collision.
         Returns true is a collision would occur and false otherwise.
     */
-    fn check_collision(&self, matrix: &Matrix, h_dir: i8, v_dir: i8, rotation: usize) -> bool {
+    fn check_collision(&self, matrix: &Matrix, h_dir: i32, v_dir: i32, rotation: usize) -> bool {
         for (rel_col, rel_row) in self.shape[rotation].iter() {
-            let col = (*rel_col + self.position.col + h_dir) as usize;
-            let row = (*rel_row + self.position.row + v_dir) as usize;
+            let col = (*rel_col as i32 + self.position.col + h_dir) as usize;
+            let row = (*rel_row as i32 + self.position.row + v_dir) as usize;
             // If col is < 0 the the cast to usize makes it large so the first check handles out of bounds both left and right
             if col >= matrix[0].len() || row >= matrix.len() || matrix[row][col] != PieceColor::Empty {
                 return true;
@@ -96,11 +96,11 @@ impl Piece {
     }
 
     pub fn movement(&mut self, matrix: &Matrix, h_dir: HDirection, v_dir: VDirection) -> bool {
-        if self.check_collision(matrix, h_dir as i8, v_dir as i8, self.rotation) {
+        if self.check_collision(matrix, h_dir as i32, v_dir as i32, self.rotation) {
             return false;
         }
-        self.position.row += v_dir as i8;
-        self.position.col += h_dir as i8;
+        self.position.row += v_dir as i32;
+        self.position.col += h_dir as i32;
         self.update_ghost(&matrix);
         match h_dir {
             HDirection::Left | HDirection::Right => {
@@ -129,10 +129,10 @@ impl Piece {
         let kick_movements = &kick_data.get(&self.kick_table).unwrap()[self.rotation][rotation as usize-1];
 
         for (h, v) in kick_movements {
-            if !self.check_collision(matrix, *h, *v, target_rotation) {
+            if !self.check_collision(matrix, *h as i32, *v as i32, target_rotation) {
                 self.rotation = target_rotation;
-                self.position.row += *v;
-                self.position.col += *h;
+                self.position.row += *v as i32;
+                self.position.col += *h as i32;
                 self.update_ghost(&matrix);
                 self.last_move_was_rotation = true;
                 return true;
@@ -151,8 +151,8 @@ impl Piece {
 
     pub fn lock(&self, matrix: &mut Matrix) {
         for (rel_col, rel_row) in self.get_orientation().iter() {
-            let col = (*rel_col + self.position.col) as usize;
-            let row = (*rel_row + self.position.row) as usize;
+            let col = (*rel_col as i32 + self.position.col) as usize;
+            let row = (*rel_row as i32 + self.position.row) as usize;
             matrix[row][col] = self.color;
         }
     }
@@ -160,8 +160,8 @@ impl Piece {
     pub fn update_ghost(&mut self, matrix: &Matrix) {
         let mut min_fall_distance = matrix.len();
         for (rel_col, rel_row) in self.get_orientation().iter() {
-            let col = (*rel_col + self.position.col) as usize;
-            let row = (*rel_row + self.position.row) as usize;
+            let col = (*rel_col as i32 + self.position.col) as usize;
+            let row = (*rel_row as i32 + self.position.row) as usize;
             let mut fall_distance = 0;
             for current_row in matrix.iter().skip(row) {
                 if current_row[col] != PieceColor::Empty {
@@ -172,7 +172,7 @@ impl Piece {
             min_fall_distance = min(min_fall_distance, fall_distance);
         }
         self.ghost_position = if min_fall_distance > 0 {
-            self.position.row + min_fall_distance as i8 - 1
+            self.position.row + min_fall_distance as i32 - 1
         } else {
             self.position.row
         };

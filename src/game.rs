@@ -271,9 +271,9 @@ impl Game {
         let mut lowest = 0;
         for (_, row) in self.piece.get_orientation().iter() {
             // Max because down is positive
-            lowest = std::cmp::max(lowest, row + self.piece.position.row);
+            lowest = std::cmp::max(lowest, *row as i32 + self.piece.position.row);
         }
-        lowest < crate::OFFSCREEN_ROWS as i8
+        lowest < crate::OFFSCREEN_ROWS as i32
     }
 
     /* Reset timers when changing direction to make movement more consistent */

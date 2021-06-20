@@ -112,13 +112,14 @@ pub fn render(canvas: &mut WindowCanvas, game: &Game, assets: &mut Assets) -> Re
     canvas.set_draw_color(Color::RGB(64, 64, 64));
     canvas.clear();
 
-    let grid_square_size = 16;
+    // Scale the grid appropriately based on the size of the matrix
+    let grid_square_size = std::cmp::min(16 * 20 / (game.matrix.len() - OFFSCREEN_ROWS), 16 * 10 / game.matrix[0].len()) as u32;
     let mut block_assets = assets.get_block_textures()?;
 
     draw_matrix(canvas, &game.matrix, grid_square_size, &mut block_assets)?;
     draw_piece(canvas, &game.piece, grid_square_size, &mut block_assets)?;
-    draw_preview(canvas, game, grid_square_size, &block_assets)?;
-    draw_held(canvas, game, grid_square_size, &block_assets)?;
+    draw_preview(canvas, game, &block_assets)?;
+    draw_held(canvas, game, &block_assets)?;
     draw_stats(canvas, &game.stats, assets)?;
     draw_frame(canvas, assets)?;
 
@@ -154,8 +155,8 @@ fn draw_piece(canvas: &mut WindowCanvas, piece: &crate::piece::Piece, grid_squar
     canvas.set_draw_color(Color::RGB(255, 255, 255));
     block_sheet.set_alpha_mod(255);
     for (col, row) in piece.get_orientation().iter() {
-        if *row + piece.ghost_position >= OFFSCREEN_ROWS as i8 {
-            let pos = get_grid_position(*col + piece.position.col, *row + piece.ghost_position - OFFSCREEN_ROWS as i8, grid_square_size, matrix_offset);
+        if *row as i32 + piece.ghost_position >= OFFSCREEN_ROWS as i32 {
+            let pos = get_grid_position(*col as i32 + piece.position.col, *row as i32 + piece.ghost_position - OFFSCREEN_ROWS as i32, grid_square_size, matrix_offset);
             canvas.fill_rect(Rect::new(pos.x-1, pos.y-1, grid_square_size+2, grid_square_size+2))?;
         }
     }
@@ -163,8 +164,8 @@ fn draw_piece(canvas: &mut WindowCanvas, piece: &crate::piece::Piece, grid_squar
     // Draw ghost piece
     block_sheet.set_alpha_mod(192);
     for (col, row) in piece.get_orientation().iter() {
-        if *row + piece.ghost_position >= OFFSCREEN_ROWS as i8 {
-            let pos = get_grid_position(*col + piece.position.col, *row + piece.ghost_position - OFFSCREEN_ROWS as i8, grid_square_size, matrix_offset);
+        if *row as i32 + piece.ghost_position >= OFFSCREEN_ROWS as i32 {
+            let pos = get_grid_position(*col as i32 + piece.position.col, *row as i32 + piece.ghost_position - OFFSCREEN_ROWS as i32, grid_square_size, matrix_offset);
             canvas.copy(block_sheet, block_sprites[piece.color as usize], Rect::new(pos.x, pos.y, grid_square_size, grid_square_size))?;
         }
     }
@@ -172,8 +173,8 @@ fn draw_piece(canvas: &mut WindowCanvas, piece: &crate::piece::Piece, grid_squar
     // Draw piece
     block_sheet.set_alpha_mod(255);
     for (col, row) in piece.get_orientation().iter() {
-        if *row + piece.position.row >= OFFSCREEN_ROWS as i8 {
-            let pos = get_grid_position(*col + piece.position.col, *row + piece.position.row - OFFSCREEN_ROWS as i8, grid_square_size, matrix_offset);
+        if *row as i32 + piece.position.row >= OFFSCREEN_ROWS as i32 {
+            let pos = get_grid_position(*col as i32 + piece.position.col, *row as i32 + piece.position.row - OFFSCREEN_ROWS as i32, grid_square_size, matrix_offset);
             canvas.copy(block_sheet, block_sprites[piece.color as usize], Rect::new(pos.x, pos.y, grid_square_size, grid_square_size))?;
         }
     }
@@ -181,13 +182,13 @@ fn draw_piece(canvas: &mut WindowCanvas, piece: &crate::piece::Piece, grid_squar
     Ok(())
 }
 
-fn draw_preview(canvas: &mut WindowCanvas, game: &Game, grid_square_size: u32, assets: &(&mut Texture, &Vec<Rect>)) -> Result<(), String> {
+fn draw_preview(canvas: &mut WindowCanvas, game: &Game, assets: &(&mut Texture, &Vec<Rect>)) -> Result<(), String> {
     let (block_sheet, block_sprites) = assets;
     canvas.set_draw_color(Color::RGB(96, 96, 96));
     let preview_offset_x = 336;
     let preview_offset_y = 16;
     let preview_piece_seperation = 48;
-    let size = grid_square_size/2;
+    let size = 8;
 
     for (i, piece) in game.get_preview_pieces().iter().rev().enumerate() {
         let next_piece = game.piece_data.get(piece).unwrap();
@@ -201,11 +202,11 @@ fn draw_preview(canvas: &mut WindowCanvas, game: &Game, grid_square_size: u32, a
     Ok(())
 }
 
-fn draw_held(canvas: &mut WindowCanvas, game: &Game, grid_square_size: u32, assets: &(&mut Texture, &Vec<Rect>)) -> Result<(), String> {
+fn draw_held(canvas: &mut WindowCanvas, game: &Game, assets: &(&mut Texture, &Vec<Rect>)) -> Result<(), String> {
     let hold_offset_x = 112;
     let hold_offset_y = 16;
     let (block_sheet, block_sprites) = assets;
-    let size = grid_square_size/2;
+    let size = 8;
 
     if let Some(held) = &game.held {
         for (col, row) in held.get_orientation().iter() {
@@ -283,7 +284,7 @@ fn format_time(microseconds: u128) -> String {
     format!("{:>0width$}:{:>0width$}.{:>0width$}", minutes, seconds, hundredths, width=2)
 }
 
-fn get_grid_position(column: i8, row: i8, grid_square_size: u32, matrix_offset: Point) -> Point {
+fn get_grid_position(column: i32, row: i32, grid_square_size: u32, matrix_offset: Point) -> Point {
     let x = column as i32 * grid_square_size as i32 + matrix_offset.x;
     let y = row as i32 * grid_square_size as i32 + matrix_offset.y;
 
