@@ -51,8 +51,8 @@ pub struct PieceType {
 }
 
 pub struct Position {
-    pub row: i32,
     pub col: i32,
+    pub row: i32,
 }
 
 pub struct Piece {
@@ -64,12 +64,16 @@ pub struct Piece {
     pub ghost_position: i32,
     spin_bonus: bool,
     last_move_was_rotation: bool,
+    inital_column: i32,
 }
 
 impl Piece {
-    pub fn new(shape: PieceShape, color: PieceColor, kick_table: String, spin_bonus: bool) -> Self {
+    pub fn new(shape: PieceShape, color: PieceColor, kick_table: String, spin_bonus: bool, matrix_width: usize) -> Self {
+        let (width, _) = shape_dimensions(&shape);
+        let (leftmost, _) = shape_top_left(&shape);
+        let inital_column = (matrix_width - width) as i32 / 2 - leftmost;
         Self {
-            position: Position {row: 0, col: 3},
+            position: Position {col: inital_column, row: 0},
             shape,
             color,
             kick_table,
@@ -77,6 +81,7 @@ impl Piece {
             ghost_position: 0,
             spin_bonus,
             last_move_was_rotation: false,
+            inital_column,
         }
     }
 
@@ -99,8 +104,8 @@ impl Piece {
         if self.check_collision(matrix, h_dir as i32, v_dir as i32, self.rotation) {
             return false;
         }
-        self.position.row += v_dir as i32;
         self.position.col += h_dir as i32;
+        self.position.row += v_dir as i32;
         self.update_ghost(&matrix);
         match h_dir {
             HDirection::Left | HDirection::Right => {
@@ -131,8 +136,8 @@ impl Piece {
         for (h, v) in kick_movements {
             if !self.check_collision(matrix, *h as i32, *v as i32, target_rotation) {
                 self.rotation = target_rotation;
-                self.position.row += *v as i32;
                 self.position.col += *h as i32;
+                self.position.row += *v as i32;
                 self.update_ghost(&matrix);
                 self.last_move_was_rotation = true;
                 return true;
@@ -183,7 +188,7 @@ impl Piece {
     }
 
     pub fn reset_position(&mut self) {
-        self.position.col = 3;
+        self.position.col = self.inital_column;
         self.position.row = 0;
         self.rotation = 0;
     }
