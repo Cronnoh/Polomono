@@ -1,6 +1,6 @@
 use crate::game::Matrix;
 
-use std::{cmp::min, collections::HashMap};
+use std::{cmp::{max, min}, collections::HashMap};
 use serde::Deserialize;
 
 #[derive(Copy, Clone, PartialEq, Deserialize)]
@@ -57,7 +57,7 @@ pub struct Position {
 
 pub struct Piece {
     pub position: Position,
-    shape: PieceShape,
+    pub shape: PieceShape,
     pub color: PieceColor,
     kick_table: String,
     rotation: usize,
@@ -197,4 +197,32 @@ impl Piece {
         let collides_right = self.check_collision(matrix, 1, 0, self.rotation);
         collides_up && collides_left && collides_right
     }
+}
+
+pub fn shape_dimensions(shape: &PieceShape) -> (usize, usize) {
+    let mut lowest_x = usize::MAX;
+    let mut highest_x = 0;
+    let mut lowest_y = usize::MAX;
+    let mut highest_y = 0;
+
+    for (x, y) in shape[0].iter() {
+        lowest_x = min(lowest_x, *x as usize);
+        lowest_y = min(lowest_y, *y as usize);
+        highest_x = max(highest_x, *x as usize);
+        highest_y = max(highest_y, *y as usize);
+    }
+
+    (highest_x - lowest_x + 1, highest_y - lowest_y + 1)
+}
+
+/* Gets the tightest top left coordinate of the piece, used to ignore empty space in the bounding box while centering pieces */
+pub fn shape_top_left(shape: &PieceShape) -> (i32, i32) {
+    let mut lowest_x = i32::MAX;
+    let mut lowest_y = i32::MAX;
+    for (x, y) in shape[0].iter() {
+        lowest_x = min(lowest_x, *x as i32);
+        lowest_y = min(lowest_y, *y as i32);
+    }
+
+    (lowest_x, lowest_y)
 }
