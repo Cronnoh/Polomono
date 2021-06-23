@@ -1,7 +1,7 @@
 use rand::Rng;
 use serde::Deserialize;
 
-use crate::piece::PieceShape;
+use crate::piece::{PieceShape, shape_dimensions, shape_top_left};
 
 #[derive(Deserialize, Clone, Copy)]
 pub enum RandomizerStyle {
@@ -163,23 +163,43 @@ pub fn chaos() -> PieceShape {
             prev_row[j] = is_filled;
         }
     }
+
+    /* If an empty piece is generated, make it a monomino */
     if initial_rotation.is_empty() {
         initial_rotation.push((0,0));
     }
 
-    let rot_cw = rotate_shape(&initial_rotation, bound);
-    let rot_180 = rotate_shape(&rot_cw, bound);
-    let rot_ccw = rotate_shape(&rot_180, bound);
+    let new_bound = adjust_bounding_box(&mut initial_rotation);
+
+    let rot_cw = rotate_shape(&initial_rotation, new_bound);
+    let rot_180 = rotate_shape(&rot_cw, new_bound);
+    let rot_ccw = rotate_shape(&rot_180, new_bound);
 
     [initial_rotation, rot_cw, rot_180, rot_ccw]
 }
 
 /* Rotate the piece CW by making each row (from the top) a column (from the right) */
-fn rotate_shape(shape: &Vec<(i8, i8)>, bound: usize) -> Vec<(i8, i8)> {
+fn rotate_shape(shape: &Vec<(i8, i8)>, bound: i8) -> Vec<(i8, i8)> {
     let mut rotated = Vec::new();
-    let columns = bound as i8 - 1;
+    let columns = bound - 1;
     for (i, j) in shape {
         rotated.push((columns-*j, *i));
     }
     rotated
+}
+
+/* Move piece center to the center of a tight bounding box, returns the new bound */
+fn adjust_bounding_box(shape: &mut Vec<(i8, i8)>) -> i8 {
+    let (leftmost, topmost) = shape_top_left(shape);
+    let (width, height) = shape_dimensions(shape);
+    let piece_center_x = (leftmost as usize + width/2) as i8;
+    let piece_center_y = (topmost as usize + height/2) as i8;
+    let new_bound = std::cmp::max(width, height) as i8;
+    let centering_offset_x = new_bound / 2 - piece_center_x;
+    let centering_offset_y = new_bound / 2 - piece_center_y;
+    for (i, j) in shape.iter_mut() {
+        *i += centering_offset_x;
+        *j += centering_offset_y;
+    }
+    new_bound
 }

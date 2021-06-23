@@ -3,7 +3,7 @@ matrix_width = 10
 
 das = 100
 arr = 0
-gravity = 250
+gravity = 25000
 lock_delay = 500
 preview_count = 5
 

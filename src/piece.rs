@@ -69,8 +69,8 @@ pub struct Piece {
 
 impl Piece {
     pub fn new(shape: PieceShape, color: PieceColor, kick_table: String, spin_bonus: bool, matrix_width: usize) -> Self {
-        let (width, _) = shape_dimensions(&shape);
-        let (leftmost, _) = shape_top_left(&shape);
+        let (width, _) = shape_dimensions(&shape[0]);
+        let (leftmost, _) = shape_top_left(&shape[0]);
         let inital_column = (matrix_width - width) as i32 / 2 - leftmost;
         Self {
             position: Position {col: inital_column, row: 0},
@@ -204,13 +204,13 @@ impl Piece {
     }
 }
 
-pub fn shape_dimensions(shape: &PieceShape) -> (usize, usize) {
+pub fn shape_dimensions(shape: &Vec<(i8, i8)>) -> (usize, usize) {
     let mut lowest_x = usize::MAX;
     let mut highest_x = 0;
     let mut lowest_y = usize::MAX;
     let mut highest_y = 0;
 
-    for (x, y) in shape[0].iter() {
+    for (x, y) in shape.iter() {
         lowest_x = min(lowest_x, *x as usize);
         lowest_y = min(lowest_y, *y as usize);
         highest_x = max(highest_x, *x as usize);
@@ -221,10 +221,10 @@ pub fn shape_dimensions(shape: &PieceShape) -> (usize, usize) {
 }
 
 /* Gets the tightest top left coordinate of the piece, used to ignore empty space in the bounding box while centering pieces */
-pub fn shape_top_left(shape: &PieceShape) -> (i32, i32) {
+pub fn shape_top_left(shape: &Vec<(i8, i8)>) -> (i32, i32) {
     let mut lowest_x = i32::MAX;
     let mut lowest_y = i32::MAX;
-    for (x, y) in shape[0].iter() {
+    for (x, y) in shape.iter() {
         lowest_x = min(lowest_x, *x as i32);
         lowest_y = min(lowest_y, *y as i32);
     }
