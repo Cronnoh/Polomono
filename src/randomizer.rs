@@ -1,6 +1,8 @@
 use rand::Rng;
 use serde::Deserialize;
 
+use crate::piece::PieceShape;
+
 #[derive(Deserialize, Clone, Copy)]
 pub enum RandomizerStyle {
     NBag, // A randomized list of all pieces once
@@ -136,4 +138,48 @@ fn fix_starting_piece(list: &mut Vec<String>, disallowed: &[String]) {
             }
         }
     }
+}
+
+pub fn chaos() -> PieceShape {
+    let mut rng = rand::thread_rng();
+    let bound = rng.gen_range(2..=4);
+
+    let mut initial_rotation = Vec::new();
+    /* Iterate through each space of the bound x bound bounding box */
+    let mut prev_row = vec![false; bound];
+    for i in 0..bound {
+        let mut prev = false;
+        for j in 0..bound {
+            let r = rng.gen_range(0..100);
+            /* The space has a 25% chance of being filled,
+                if the space to it's left or above it is filled it has a 50% chance */
+            let mut is_filled = initial_rotation.len() < 2 && r < 80;
+            is_filled = is_filled || r < 5;
+            is_filled = is_filled || (prev_row[j] || prev) && r < 30;
+            if is_filled {
+                initial_rotation.push((i as i8, j as i8));
+            }
+            prev = is_filled;
+            prev_row[j] = is_filled;
+        }
+    }
+    if initial_rotation.is_empty() {
+        initial_rotation.push((0,0));
+    }
+
+    let rot_cw = rotate_shape(&initial_rotation, bound);
+    let rot_180 = rotate_shape(&rot_cw, bound);
+    let rot_ccw = rotate_shape(&rot_180, bound);
+
+    [initial_rotation, rot_cw, rot_180, rot_ccw]
+}
+
+/* Rotate the piece CW by making each row (from the top) a column (from the right) */
+fn rotate_shape(shape: &Vec<(i8, i8)>, bound: usize) -> Vec<(i8, i8)> {
+    let mut rotated = Vec::new();
+    let columns = bound as i8 - 1;
+    for (i, j) in shape {
+        rotated.push((columns-*j, *i));
+    }
+    rotated
 }

@@ -1,5 +1,6 @@
 use crate::piece::*;
 use crate::input::*;
+use crate::randomizer;
 use crate::randomizer::*;
 use std::collections::HashMap;
 
@@ -285,10 +286,11 @@ impl Game {
 }
 
 fn next_piece(piece_queue: &mut Vec<String>, piece_data: &HashMap<String, PieceType>, matrix: &Matrix) -> Piece {
-    let new_piece = piece_data.get(&piece_queue.pop()
-        .expect("Popped from empty piece queue"))
-        .expect("Tried to get non-existent piece from piece_data");
-    let mut piece = Piece::new(new_piece.shape.clone(), new_piece.color, new_piece.kick_table.clone(), new_piece.spin_bonus, matrix[0].len());
+    // let new_piece = piece_data.get(&piece_queue.pop()
+    //     .expect("Popped from empty piece queue"))
+    //     .expect("Tried to get non-existent piece from piece_data");
+    // let mut piece = Piece::new(new_piece.shape.clone(), new_piece.color, new_piece.kick_table.clone(), new_piece.spin_bonus, matrix[0].len());
+    let mut piece = Piece::new(randomizer::chaos(), PieceColor::Blue, "SRS".to_string(), false, matrix[0].len());
     piece.update_ghost(&matrix);
     piece
 }
