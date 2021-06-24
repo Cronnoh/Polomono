@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use rand::Rng;
 use serde::Deserialize;
 
-use crate::piece::{Piece, PieceShape, PieceType, shape_dimensions, shape_top_left};
+use crate::piece::{Piece, PieceColor, PieceShape, PieceType, shape_dimensions, shape_top_left};
 
 #[derive(Deserialize, Clone, Copy)]
 pub enum RandomizerStyle {
@@ -40,9 +40,7 @@ impl Randomizer {
             RandomizerStyle::FullRandom => new_pieces = self.full_random(),
             RandomizerStyle::Classic => new_pieces = self.classic(),
             RandomizerStyle::Streak => new_pieces = self.streak(),
-            RandomizerStyle::Chaos => {
-                return Vec::new();
-            }
+            RandomizerStyle::Chaos => return self.chaos(),
         }
         if let Some(disallowed) = cannot_start_with {
             fix_starting_piece(&mut new_pieces, disallowed);
@@ -119,11 +117,21 @@ impl Randomizer {
         pieces
     }
 
-    fn streak(&mut self) -> Vec<String>{
+    fn streak(&mut self) -> Vec<String> {
         let mut rng = rand::thread_rng();
         let piece = self.piece_list[rng.gen_range(0..self.piece_list.len())].clone();
         let count = rng.gen_range(2..6);
         vec![piece; count]
+    }
+
+    fn chaos(&self) -> Vec<Piece> {
+        let mut pieces = Vec::new();
+        for _ in 0..10 {
+            let shape = generate_piece_shape();
+            let color = PieceColor::Blue;
+            pieces.push(Piece::new(shape, color, "SRS".to_string(), false));
+        }
+        pieces
     }
 }
 
@@ -157,7 +165,7 @@ fn fix_starting_piece(list: &mut Vec<String>, disallowed: &[String]) {
     }
 }
 
-pub fn chaos() -> PieceShape {
+fn generate_piece_shape() -> PieceShape {
     let mut rng = rand::thread_rng();
     let bound = rng.gen_range(3..=4);
 

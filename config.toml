@@ -9,8 +9,8 @@ preview_count = 5
 
 piece_list = ["I", "T", "O", "J", "L", "S", "Z"]
 cannot_start_with = ["O", "S", "Z"]
-starting_randomizer = "DoubleNBag"
-randomizer = "NBag"
+# starting_randomizer = "DoubleNBag"
+randomizer = "Chaos"
 
 # Controls
 # Hold Toggle
