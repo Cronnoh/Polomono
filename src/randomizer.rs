@@ -1,7 +1,9 @@
+use std::collections::HashMap;
+
 use rand::Rng;
 use serde::Deserialize;
 
-use crate::piece::{PieceShape, shape_dimensions, shape_top_left};
+use crate::piece::{Piece, PieceShape, PieceType, shape_dimensions, shape_top_left};
 
 #[derive(Deserialize, Clone, Copy)]
 pub enum RandomizerStyle {
@@ -11,6 +13,7 @@ pub enum RandomizerStyle {
     FullRandom, // Fully random list of pieces
     Classic, //Random list of pieces with rerolls on pieces that appear twice in a row
     Streak, // Get a random piece a random number of times in a row
+    Chaos, // Randomly generated pieces
 }
 
 pub struct Randomizer {
@@ -28,7 +31,7 @@ impl Randomizer {
         }
     }
 
-    pub fn generate_pieces(&mut self, cannot_start_with: &Option<Vec<String>>) -> Vec<String> {
+    pub fn generate_pieces(&mut self, cannot_start_with: &Option<Vec<String>>, piece_data: &HashMap<String, PieceType>) -> Vec<Piece> {
         let mut new_pieces: Vec<String>;
         match self.style {
             RandomizerStyle::NBag => new_pieces = self.n_bag(),
@@ -37,11 +40,14 @@ impl Randomizer {
             RandomizerStyle::FullRandom => new_pieces = self.full_random(),
             RandomizerStyle::Classic => new_pieces = self.classic(),
             RandomizerStyle::Streak => new_pieces = self.streak(),
+            RandomizerStyle::Chaos => {
+                return Vec::new();
+            }
         }
         if let Some(disallowed) = cannot_start_with {
             fix_starting_piece(&mut new_pieces, disallowed);
         }
-        new_pieces
+        create_pieces(new_pieces, piece_data)
     }
 
     fn n_bag(&self) -> Vec<String> {
@@ -127,6 +133,17 @@ fn randomize<T>(bag: &mut [T]) {
     for i in 0..len {
         bag.swap(i, rng.gen_range(i..len));
     }
+}
+
+fn create_pieces(piece_names: Vec<String>, piece_data: &HashMap<String, PieceType>) -> Vec<Piece> {
+    let mut pieces = Vec::new();
+    for name in piece_names {
+        let piece = piece_data.get(&name)
+            .expect(&format!("Tried to get {} from piece_data, but it was not found", name));
+        pieces.push(Piece::new(piece.shape.clone(), piece.color, piece.kick_table.clone(), piece.spin_bonus));
+    }
+
+    pieces
 }
 
 fn fix_starting_piece(list: &mut Vec<String>, disallowed: &[String]) {

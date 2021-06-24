@@ -1,6 +1,5 @@
 use crate::piece::*;
 use crate::input::*;
-use crate::randomizer;
 use crate::randomizer::*;
 use std::collections::HashMap;
 
@@ -27,7 +26,7 @@ pub struct Game {
     pub held: Option<Piece>,
     pub piece_data: HashMap<String, PieceType>,
     kick_data: HashMap<String, KickData>,
-    piece_queue: Vec<String>,
+    piece_queue: Vec<Piece>,
     pub stats: Stats,
     randomizer: Randomizer,
 
@@ -62,10 +61,10 @@ impl Game {
             None => config.randomizer,
         };
         let mut randomizer = Randomizer::new(config.piece_list.clone(), starting_randomizer);
-        let mut piece_queue = randomizer.generate_pieces(&config.cannot_start_with);
+        let mut piece_queue = randomizer.generate_pieces(&config.cannot_start_with, &piece_data);
         randomizer.style = config.randomizer;
-        extend_queue(&mut piece_queue, config.preview_count, &mut randomizer);
-        let piece = next_piece(&mut piece_queue, &piece_data, &matrix);
+        extend_queue(&mut piece_queue, config.preview_count, &piece_data, &mut randomizer);
+        let piece = next_piece(&mut piece_queue, &matrix);
 
         let stats = Stats {
             score: 0,
@@ -170,8 +169,8 @@ impl Game {
             self.can_hold = true;
             self.stats.pieces_placed += 1;
             self.handle_line_clears(bonus);
-            extend_queue(&mut self.piece_queue, self.preview_count, &mut self.randomizer);
-            self.piece = next_piece(&mut self.piece_queue, &self.piece_data, &self.matrix);
+            extend_queue(&mut self.piece_queue, self.preview_count, &self.piece_data, &mut self.randomizer);
+            self.piece = next_piece(&mut self.piece_queue, &self.matrix);
         }
     }
 
@@ -224,7 +223,7 @@ impl Game {
         }
     }
 
-    pub fn get_preview_pieces(&self) -> &[String] {
+    pub fn get_preview_pieces(&self) -> &[Piece] {
         &self.piece_queue[self.piece_queue.len()-self.preview_count..]
     }
 
@@ -233,14 +232,14 @@ impl Game {
             return;
         }
         self.can_hold = false;
-        self.piece.reset_position();
+        self.piece.reset_position(&self.matrix);
         match &mut self.held {
             Some(held) => {
                 std::mem::swap(&mut self.piece, held);
             }
             None => {
-                extend_queue(&mut self.piece_queue, self.preview_count, &mut self.randomizer);
-                let next = next_piece(&mut self.piece_queue, &self.piece_data, &self.matrix);
+                extend_queue(&mut self.piece_queue, self.preview_count, &self.piece_data, &mut self.randomizer);
+                let next = next_piece(&mut self.piece_queue, &self.matrix);
                 self.held = Some(std::mem::replace(&mut self.piece, next));
             }
         }
@@ -285,20 +284,17 @@ impl Game {
     }
 }
 
-fn next_piece(piece_queue: &mut Vec<String>, piece_data: &HashMap<String, PieceType>, matrix: &Matrix) -> Piece {
-    // let new_piece = piece_data.get(&piece_queue.pop()
-    //     .expect("Popped from empty piece queue"))
-    //     .expect("Tried to get non-existent piece from piece_data");
-    // let mut piece = Piece::new(new_piece.shape.clone(), new_piece.color, new_piece.kick_table.clone(), new_piece.spin_bonus, matrix[0].len());
-    let mut piece = Piece::new(randomizer::chaos(), PieceColor::Blue, "SRS".to_string(), false, matrix[0].len());
-    piece.update_ghost(&matrix);
+fn next_piece(piece_queue: &mut Vec<Piece>, matrix: &Matrix) -> Piece {
+    let mut piece = piece_queue.pop()
+        .expect("Popped from empty piece queue");
+    piece.reset_position(&matrix);
     piece
 }
 
-fn extend_queue(piece_queue: &mut Vec<String>, preview_count: usize, randomizer: &mut Randomizer) {
+fn extend_queue(piece_queue: &mut Vec<Piece>, preview_count: usize, piece_data: &HashMap<String, PieceType>, randomizer: &mut Randomizer) {
     /* Add more pieces to the queue if it is too small */
     while piece_queue.len() <= preview_count {
-        let mut new_bag = randomizer.generate_pieces(&None);
+        let mut new_bag = randomizer.generate_pieces(&None, piece_data);
         new_bag.append(piece_queue);
         *piece_queue = new_bag;
     }

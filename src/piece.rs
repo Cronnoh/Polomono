@@ -64,16 +64,12 @@ pub struct Piece {
     pub ghost_position: i32,
     spin_bonus: bool,
     last_move_was_rotation: bool,
-    inital_column: i32,
 }
 
 impl Piece {
-    pub fn new(shape: PieceShape, color: PieceColor, kick_table: String, spin_bonus: bool, matrix_width: usize) -> Self {
-        let (width, _) = shape_dimensions(&shape[0]);
-        let (leftmost, _) = shape_top_left(&shape[0]);
-        let inital_column = (matrix_width - width) as i32 / 2 - leftmost;
+    pub fn new(shape: PieceShape, color: PieceColor, kick_table: String, spin_bonus: bool) -> Self {
         Self {
-            position: Position {col: inital_column, row: 0},
+            position: Position {col: 0, row: 0},
             shape,
             color,
             kick_table,
@@ -81,7 +77,6 @@ impl Piece {
             ghost_position: 0,
             spin_bonus,
             last_move_was_rotation: false,
-            inital_column,
         }
     }
 
@@ -187,10 +182,14 @@ impl Piece {
         self.check_collision(matrix, 0, 1, self.rotation)
     }
 
-    pub fn reset_position(&mut self) {
-        self.position.col = self.inital_column;
+    pub fn reset_position(&mut self, matrix: &Matrix) {
+        let (width, _) = shape_dimensions(&self.shape[0]);
+        let (leftmost, _) = shape_top_left(&self.shape[0]);
+        let inital_column = (matrix[0].len() - width) as i32 / 2 - leftmost;
+        self.position.col = inital_column;
         self.position.row = 0;
         self.rotation = 0;
+        self.update_ghost(&matrix);
     }
 
     pub fn check_bonus(&self, matrix: &Matrix) -> bool {

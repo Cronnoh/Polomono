@@ -190,15 +190,14 @@ fn draw_preview(canvas: &mut WindowCanvas, game: &Game, assets: &(&mut Texture, 
     let size = 10;
 
     for (i, piece) in game.get_preview_pieces().iter().rev().enumerate() {
-        let next_piece = game.piece_data.get(piece).unwrap();
-        let (width, height) = shape_dimensions(&next_piece.shape[0]);
-        let (top_left_x, top_left_y) = shape_top_left(&next_piece.shape[0]);
+        let (width, height) = shape_dimensions(&piece.shape[0]);
+        let (top_left_x, top_left_y) = shape_top_left(&piece.shape[0]);
         let centering_offset_x = get_centered_offset(preview_offset_x, preview_piece_box_size, width, size as usize);
         let centering_offset_y = get_centered_offset(preview_offset_y, preview_piece_box_size, height, size as usize);
-        for (col, row) in next_piece.shape[0].iter() {
+        for (col, row) in piece.shape[0].iter() {
             let x = (*col as i32 - top_left_x) * size as i32 + centering_offset_x as i32;
             let y = (*row as i32 - top_left_y) * size as i32 + centering_offset_y as i32 + (preview_piece_box_size * i) as i32;
-            canvas.copy(block_sheet, block_sprites[next_piece.color as usize], Rect::new(x, y, size, size))?;
+            canvas.copy(block_sheet, block_sprites[piece.color as usize], Rect::new(x, y, size, size))?;
         }
     }
     Ok(())
