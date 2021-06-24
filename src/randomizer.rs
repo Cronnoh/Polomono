@@ -142,7 +142,7 @@ fn fix_starting_piece(list: &mut Vec<String>, disallowed: &[String]) {
 
 pub fn chaos() -> PieceShape {
     let mut rng = rand::thread_rng();
-    let bound = rng.gen_range(2..=4);
+    let bound = rng.gen_range(3..=4);
 
     let mut initial_rotation = Vec::new();
     /* Iterate through each space of the bound x bound bounding box */
@@ -151,13 +151,12 @@ pub fn chaos() -> PieceShape {
         let mut prev = false;
         for j in 0..bound {
             let r = rng.gen_range(0..100);
-            /* The space has a 25% chance of being filled,
-                if the space to it's left or above it is filled it has a 50% chance */
-            let mut is_filled = initial_rotation.len() < 2 && r < 80;
-            is_filled = is_filled || r < 5;
+            let mut is_filled = initial_rotation.len() < 1 && r < 80;
+            is_filled = is_filled || initial_rotation.len() < 4 && (prev_row[j] || prev) && r < 60;
             is_filled = is_filled || (prev_row[j] || prev) && r < 30;
+            is_filled = is_filled || r < 5;
             if is_filled {
-                initial_rotation.push((i as i8, j as i8));
+                initial_rotation.push((j as i8, i as i8));
             }
             prev = is_filled;
             prev_row[j] = is_filled;
