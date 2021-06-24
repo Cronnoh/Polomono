@@ -1,6 +1,7 @@
 use crate::game::Matrix;
 
 use std::{cmp::{max, min}, collections::HashMap};
+use rand::{distributions::Standard, prelude::Distribution};
 use serde::Deserialize;
 
 #[derive(Copy, Clone, PartialEq, Deserialize)]
@@ -15,6 +16,23 @@ pub enum PieceColor {
     Red,
     Gray,
     ColorCount
+}
+
+impl Distribution<PieceColor> for Standard {
+    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> PieceColor {
+        match rng.gen_range(1..PieceColor::ColorCount as usize) {
+            0 => PieceColor::Cyan,
+            1 => PieceColor::Magenta,
+            2 => PieceColor::Cyan,
+            3 => PieceColor::Yellow,
+            4 => PieceColor::Blue,
+            5 => PieceColor::Orange,
+            6 => PieceColor::Green,
+            7 => PieceColor::Red,
+            8 => PieceColor::Gray,
+            _ => PieceColor::Cyan,
+        }
+    }
 }
 
 #[derive(Clone, Copy, PartialEq)]

@@ -128,7 +128,7 @@ impl Randomizer {
         let mut pieces = Vec::new();
         for _ in 0..10 {
             let shape = generate_piece_shape();
-            let color = PieceColor::Blue;
+            let color: PieceColor = rand::random();
             pieces.push(Piece::new(shape, color, "SRS".to_string(), false));
         }
         pieces
