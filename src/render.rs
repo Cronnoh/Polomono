@@ -190,15 +190,8 @@ fn draw_preview(canvas: &mut WindowCanvas, game: &Game, assets: &(&mut Texture, 
     let size = 10;
 
     for (i, piece) in game.get_preview_pieces().iter().rev().enumerate() {
-        let (width, height) = shape_dimensions(&piece.shape[0]);
-        let (top_left_x, top_left_y) = shape_top_left(&piece.shape[0]);
-        let centering_offset_x = get_centered_offset(preview_offset_x, preview_piece_box_size, width, size as usize);
-        let centering_offset_y = get_centered_offset(preview_offset_y, preview_piece_box_size, height, size as usize);
-        for (col, row) in piece.shape[0].iter() {
-            let x = (*col as i32 - top_left_x) * size as i32 + centering_offset_x as i32;
-            let y = (*row as i32 - top_left_y) * size as i32 + centering_offset_y as i32 + (preview_piece_box_size * i) as i32;
-            canvas.copy(block_sheet, block_sprites[piece.color as usize], Rect::new(x, y, size, size))?;
-        }
+        let offset_y = preview_offset_y + (preview_piece_box_size * i);
+        draw_centered_piece(canvas, &block_sheet, &block_sprites[piece.color as usize], &piece.shape[0], preview_offset_x, offset_y, preview_piece_box_size, size)?;
     }
     Ok(())
 }
@@ -211,16 +204,7 @@ fn draw_held(canvas: &mut WindowCanvas, game: &Game, assets: &(&mut Texture, &Ve
         let hold_box_size = 48;
         let size = 10;
 
-        let (width, height) = shape_dimensions(&held.shape[0]);
-        let (top_left_x, top_left_y) = shape_top_left(&held.shape[0]);
-        let centering_offset_x = get_centered_offset(hold_offset_x, hold_box_size, width, size as usize);
-        let centering_offset_y = get_centered_offset(hold_offset_y, hold_box_size, height, size as usize);
-
-        for (col, row) in held.get_orientation().iter() {
-            let x = (*col as i32 - top_left_x) * size as i32 + centering_offset_x as i32;
-            let y = (*row as i32 - top_left_y) * size as i32 + centering_offset_y as i32;
-            canvas.copy(block_sheet, block_sprites[held.color as usize], Rect::new(x, y, size, size))?;
-        }
+        draw_centered_piece(canvas, &block_sheet, &block_sprites[held.color as usize], &held.shape[0], hold_offset_x, hold_offset_y, hold_box_size, size)?;
     }
     Ok(())
 }
@@ -296,6 +280,30 @@ fn get_grid_position(column: i32, row: i32, grid_square_size: u32, matrix_offset
     let y = row as i32 * grid_square_size as i32 + matrix_offset.y;
 
     Point::new(x, y)
+}
+
+fn draw_centered_piece(
+    canvas: &mut WindowCanvas,
+    block_sheet: &Texture,
+    color: &Rect,
+    shape: &Vec<(i8, i8)>,
+    offset_x: usize,
+    offset_y: usize, 
+    container_size: usize,
+    block_size: u32
+) -> Result<(), String> {
+
+    let (width, height) = shape_dimensions(shape);
+    let (top_left_x, top_left_y) = shape_top_left(shape);
+    let centering_offset_x = get_centered_offset(offset_x, container_size, width, block_size as usize);
+    let centering_offset_y = get_centered_offset(offset_y, container_size, height, block_size as usize);
+
+    for (col, row) in shape.iter() {
+        let x = (*col as i32 - top_left_x) * block_size as i32 + centering_offset_x as i32;
+        let y = (*row as i32 - top_left_y) * block_size as i32 + centering_offset_y as i32;
+        canvas.copy(block_sheet, *color, Rect::new(x, y, block_size, block_size))?;
+    }
+    Ok(())
 }
 
 fn get_centered_offset(offset: usize, container_size: usize, dimension: usize, size: usize) -> usize {
