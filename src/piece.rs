@@ -221,7 +221,7 @@ impl Piece {
     }
 }
 
-pub fn shape_dimensions(shape: &Vec<(i8, i8)>) -> (usize, usize) {
+pub fn shape_dimensions(shape: &[(i8, i8)]) -> (usize, usize) {
     let mut lowest_x = usize::MAX;
     let mut highest_x = 0;
     let mut lowest_y = usize::MAX;
@@ -238,7 +238,7 @@ pub fn shape_dimensions(shape: &Vec<(i8, i8)>) -> (usize, usize) {
 }
 
 /* Gets the tightest top left coordinate of the piece, used to ignore empty space in the bounding box while centering pieces */
-pub fn shape_top_left(shape: &Vec<(i8, i8)>) -> (i32, i32) {
+pub fn shape_top_left(shape: &[(i8, i8)]) -> (i32, i32) {
     let mut lowest_x = i32::MAX;
     let mut lowest_y = i32::MAX;
     for (x, y) in shape.iter() {

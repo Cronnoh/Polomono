@@ -286,7 +286,7 @@ fn draw_centered_piece(
     canvas: &mut WindowCanvas,
     block_sheet: &Texture,
     color: &Rect,
-    shape: &Vec<(i8, i8)>,
+    shape: &[(i8, i8)],
     offset_x: usize,
     offset_y: usize, 
     container_size: usize,

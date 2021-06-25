@@ -147,7 +147,7 @@ fn create_pieces(piece_names: Vec<String>, piece_data: &HashMap<String, PieceTyp
     let mut pieces = Vec::new();
     for name in piece_names {
         let piece = piece_data.get(&name)
-            .expect(&format!("Tried to get {} from piece_data, but it was not found", name));
+            .unwrap_or_else(|| panic!("Tried to get {} from piece_data, but it was not found", name));
         pieces.push(Piece::new(piece.shape.clone(), piece.color, piece.kick_table.clone(), piece.spin_bonus));
     }
 
@@ -203,7 +203,7 @@ fn generate_piece_shape() -> PieceShape {
 }
 
 /* Rotate the piece CW by making each row (from the top) a column (from the right) */
-fn rotate_shape(shape: &Vec<(i8, i8)>, bound: i8) -> Vec<(i8, i8)> {
+fn rotate_shape(shape: &[(i8, i8)], bound: i8) -> Vec<(i8, i8)> {
     let mut rotated = Vec::new();
     let columns = bound - 1;
     for (i, j) in shape {
