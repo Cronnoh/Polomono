@@ -3,6 +3,7 @@ mod game;
 mod input;
 mod render;
 mod randomizer;
+mod menu;
 use input::GameInput;
 
 use std::{collections::HashMap, path::Path, time::Instant};
@@ -70,6 +71,7 @@ fn main() -> Result<(), String> {
     let mut game = game::Game::new(&config)?;
     let mut current_time = Instant::now();
     let mut event_pump = sdl_context.event_pump()?;
+    let mut menu = menu::Menu {grid_position: (0,0)};
     'running: loop {
         let elapsed = current_time.elapsed().as_micros();
         current_time = Instant::now();
@@ -93,9 +95,11 @@ fn main() -> Result<(), String> {
             game = game::Game::new(&config)?;
         }
 
-        game.update(&mut input, elapsed);
+        menu.update(&mut input);
+        menu.render(&mut canvas);
+        // game.update(&mut input, elapsed);
 
-        render::render(&mut canvas, &game, &mut assets)?;
+        // render::render(&mut canvas, &game, &mut assets)?;
     }
 
     Ok(())
