@@ -4,6 +4,7 @@ mod input;
 mod render;
 mod randomizer;
 mod menu;
+mod scene_manager;
 use input::GameInput;
 
 use std::{collections::HashMap, path::Path, time::Instant};
