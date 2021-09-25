@@ -4,10 +4,10 @@ mod input;
 mod render;
 mod randomizer;
 mod menu;
-mod scene_manager;
-use input::GameInput;
+mod scenes;
+mod game_scene;
 
-use std::{collections::HashMap, path::Path, time::Instant};
+use std::{path::Path, time::Instant};
 
 use sdl2::{
     event::Event,
@@ -58,25 +58,25 @@ fn main() -> Result<(), String> {
         .map_err(|e| e.to_string())?;
 
     let texture_creator = canvas.texture_creator();
+    let mut assets = render::Assets::new();
+    assets.load_block_textures(&texture_creator, Path::new("assets/blocks.png"))?;
+    assets.load_font(&ttf_context, &texture_creator, Path::new("assets/Hack-Bold.ttf"))?;
+    assets.load_frame(&texture_creator, Path::new("assets/frame.png"))?;
 
     let mut assets = render::Assets::new();
     assets.load_block_textures(&texture_creator, Path::new("assets/blocks.png"))?;
     assets.load_font(&ttf_context, &texture_creator, Path::new("assets/Hack-Bold.ttf"))?;
     assets.load_frame(&texture_creator, Path::new("assets/frame.png"))?;
 
-    let config: Config = load_data(Path::new("config.toml"))?;
-    let bindings: HashMap<String, GameInput> = load_data(Path::new("control_config.toml"))?;
+    let mut scene_manager = scenes::SceneManager::new(scenes::Scene::Game(game_scene::GameScene::new()?));
 
-    let mut input = input::Input::new();
-
-    let mut game = game::Game::new(&config)?;
     let mut current_time = Instant::now();
     let mut event_pump = sdl_context.event_pump()?;
-    let mut menu = menu::Menu {grid_position: (0,0)};
     'running: loop {
         let elapsed = current_time.elapsed().as_micros();
         current_time = Instant::now();
 
+        let mut input_events = Vec::new();
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit {..}
@@ -85,22 +85,13 @@ fn main() -> Result<(), String> {
                 }
                 Event::KeyDown{ repeat: false, ..} | Event::KeyUp{ repeat: false, ..}
                 | Event::ControllerButtonDown{..} | Event::ControllerButtonUp{..} => {
-                    input::handle_input_event(&mut input, event, &bindings);
+                    input_events.push(event);
                 }
                 _ => {},
             }
         }
 
-        if input.reset {
-            input.reset = false;
-            game = game::Game::new(&config)?;
-        }
-
-        menu.update(&mut input);
-        menu.render(&mut canvas);
-        // game.update(&mut input, elapsed);
-
-        // render::render(&mut canvas, &game, &mut assets)?;
+        scene_manager.update(&mut canvas, &mut assets, input_events, elapsed)?;
     }
 
     Ok(())

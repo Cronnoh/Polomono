@@ -1,48 +1,10 @@
 use std::collections::HashMap;
 
-use sdl2::{
-    GameControllerSubsystem,
-    controller::GameController,
-    event::Event,
-};
+use enum_map::EnumMap;
+use sdl2::{GameControllerSubsystem, controller::GameController, event::Event};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
-pub struct Input {
-    pub hard_drop: bool,
-    pub instant_drop: bool,
-    pub soft_drop: bool,
-    pub left: bool,
-    pub shift_left: bool,
-    pub right: bool,
-    pub shift_right: bool,
-    pub rot_cw: bool,
-    pub rot_180: bool,
-    pub rot_ccw: bool,
-    pub hold: bool,
-    pub reset: bool,
-}
-
-impl Input {
-    pub fn new() -> Self {
-        Self {
-            hard_drop: false,
-            instant_drop: false,
-            soft_drop: false,
-            left: false,
-            shift_left: false,
-            right: false,
-            shift_right: false,
-            rot_cw: false,
-            rot_180: false,
-            rot_ccw: false,
-            hold: false,
-            reset: false,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, enum_map::Enum, Clone, Copy)]
 pub enum GameInput {
     HardDrop,
     InstantDrop,
@@ -58,7 +20,18 @@ pub enum GameInput {
     Reset,
 }
 
-pub fn handle_input_event(input: &mut Input, event: Event, bindings: &HashMap<String, GameInput>) {
+#[derive(Serialize, Deserialize, enum_map::Enum, Clone, Copy)]
+pub enum MenuInput {
+    Up,
+    Down,
+    Left,
+    Right,
+    Accept,
+    Cancel,
+}
+
+pub fn handle_input_event<T>(input: &mut EnumMap<T, bool>, event: Event, bindings: &HashMap<String, T>)
+where T: enum_map::Enum<bool> + Copy {
     let (button, state) = match event {
         Event::KeyDown { keycode: Some(key), ..} => {
             (format!("Key({})", key.to_string()), true)
@@ -76,20 +49,7 @@ pub fn handle_input_event(input: &mut Input, event: Event, bindings: &HashMap<St
     };
 
     if let Some(x) = bindings.get(&button) {
-        match x {
-            GameInput::HardDrop => input.hard_drop = state,
-            GameInput::InstantDrop => input.instant_drop = state,
-            GameInput::SoftDrop => input.soft_drop = state,
-            GameInput::Left => input.left = state,
-            GameInput::ShiftLeft => input.shift_left = state,
-            GameInput::Right => input.right = state,
-            GameInput::ShiftRight => input.shift_right = state,
-            GameInput::RotateCW => input.rot_cw = state,
-            GameInput::Rotate180 => input.rot_180 = state,
-            GameInput::RotateCCW => input.rot_ccw = state,
-            GameInput::Hold => input.hold = state,
-            GameInput::Reset => input.reset = state,
-        }
+        input[*x] = state;
     };
 }
 

@@ -1,3 +1,5 @@
+use enum_map::EnumMap;
+
 use crate::piece::*;
 use crate::input::*;
 use crate::randomizer::*;
@@ -102,7 +104,7 @@ impl Game {
         })
     }
 
-    pub fn update(&mut self, input: &mut Input, elapsed: u128) {
+    pub fn update(&mut self, input: &mut EnumMap<GameInput, bool>, elapsed: u128) {
         if self.game_over {
             return;
         }
@@ -112,12 +114,12 @@ impl Game {
 
         match movement_action {
             MovementAction::HardDrop => {
-                input.hard_drop = false;
+                input[GameInput::HardDrop] = false;
                 self.piece.hard_drop();
                 placed_piece = true;
             }
             MovementAction::InstantDrop => {
-                input.instant_drop = false;
+                input[GameInput::InstantDrop] = false;
                 self.piece.hard_drop();
             }
             MovementAction::Horizontal(direction) => {
@@ -135,9 +137,9 @@ impl Game {
         match rotation_action {
             RotationAction::None => {}
             _ => {
-                input.rot_cw = false;
-                input.rot_180 = false;
-                input.rot_ccw = false;
+                input[GameInput::RotateCW] = false;
+                input[GameInput::RotateCCW] = false;
+                input[GameInput::Rotate180] = false;
                 if self.piece.rotate(&self.matrix, &self.kick_data, rotation_action) {
                     /* Reduce the lock timer after a successful rotation to make spins easier */
                     self.lock_timer = std::cmp::max(0, self.lock_timer as i128 - self.lock_delay as i128/4) as u128;
@@ -145,12 +147,12 @@ impl Game {
             }
         }
 
-        if input.hold {
-            input.hold = false;
+        if input[GameInput::Hold] {
+            input[GameInput::Hold] = false;
             self.hold_piece();
         }
 
-        self.gravity(elapsed, input.soft_drop);
+        self.gravity(elapsed, input[GameInput::SoftDrop]);
 
         if self.piece.is_grounded(&self.matrix) {
             self.lock_timer += elapsed;
@@ -330,16 +332,17 @@ fn remove_rows(matrix: &mut Matrix, remove: Vec<usize>) {
     }
 }
 
-fn read_inputs(input: &Input) -> (MovementAction, RotationAction) {
+fn read_inputs(input: &EnumMap<GameInput, bool>) -> (MovementAction, RotationAction) {
     /* HardDrop and InstantDrop return to disallow rotation with those movements */
-    if input.hard_drop {
+    use crate::input::GameInput::*;
+    if input[HardDrop] {
         return (MovementAction::HardDrop, RotationAction::None);
     }
-    if input.instant_drop {
+    if input[InstantDrop] {
         return (MovementAction::InstantDrop, RotationAction::None);
     }
 
-    let movement_action = match (input.left, input.right, input.shift_left, input.shift_right) {
+    let movement_action = match (input[Left], input[Right], input[ShiftLeft], input[ShiftRight]) {
         (_, _, true, false) => MovementAction::ShiftHorizontal(HDirection::Left),
         (_, _, false, true) => MovementAction::ShiftHorizontal(HDirection::Right),
         (true, false, _, _) => MovementAction::Horizontal(HDirection::Left),
@@ -347,7 +350,7 @@ fn read_inputs(input: &Input) -> (MovementAction, RotationAction) {
         _ => MovementAction::None,
     };
 
-    let rotation_action = match (input.rot_cw, input.rot_ccw, input.rot_180) {
+    let rotation_action = match (input[RotateCW], input[RotateCCW], input[Rotate180]) {
         (true, false, false) => RotationAction::RotateCW,
         (false, true, false) => RotationAction::RotateCCW,
         (false, false, true) => RotationAction::Rotate180,

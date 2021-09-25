@@ -1,6 +1,6 @@
 use sdl2::{pixels::Color, rect::Rect, render::WindowCanvas};
-
-use crate::input::Input;
+use enum_map::EnumMap;
+use crate::input::MenuInput;
 
 const GRID_COLUMNS: usize = 2;
 const GRID_ROWS: usize = 3;
@@ -27,26 +27,26 @@ pub struct Menu {
 }
 
 impl Menu {
-    pub fn update(&mut self, input: &mut Input) {
-        let movement_h = match (input.left, input.right) {
+    pub fn update(&mut self, input: &mut EnumMap<MenuInput, bool>) {
+        let movement_h = match (input[MenuInput::Left], input[MenuInput::Right]) {
             (true, false) => {
-                input.left = false;
+                input[MenuInput::Left] = false;
                 -1
             }
             (false, true) => {
-                input.right = false;
+                input[MenuInput::Right] = false;
                 1
             }
             _ => 0,
         };
 
-        let movement_v = match (input.hard_drop, input.instant_drop) {
+        let movement_v = match (input[MenuInput::Up], input[MenuInput::Down]) {
             (true, false) => {
-                input.hard_drop = false;
+                input[MenuInput::Up] = false;
                 -1
             }
             (false, true) => {
-                input.instant_drop = false;
+                input[MenuInput::Down] = false;
                 1
             }
             _ => 0,
@@ -56,8 +56,8 @@ impl Menu {
         let new_y = (((self.grid_position.1 as i32 + movement_v) + GRID_ROWS as i32) % GRID_ROWS as i32) as usize;
         self.grid_position = (new_x, new_y);
 
-        if input.rot_ccw {
-            input.rot_ccw = false;
+        if input[MenuInput::Accept] {
+            input[MenuInput::Accept] = false;
             println!("{:?}", MENU_GRID[self.grid_position.1][self.grid_position.0]);
         }
     }
