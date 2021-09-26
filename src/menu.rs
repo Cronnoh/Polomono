@@ -22,13 +22,19 @@ enum MenuTile {
     Option6,
 }
 
+pub enum MenuStatus {
+    Exit,
+    Continue,
+    Game,
+    Settings,
+} 
+
 pub struct Menu {
     pub grid_position: (usize, usize),
-
 }
 
 impl Menu {
-    pub fn update(&mut self, input: &mut EnumMap<MenuInput, bool>) {
+    pub fn update(&mut self, input: &mut EnumMap<MenuInput, bool>) -> MenuStatus {
         let movement_h = match (input[MenuInput::Left], input[MenuInput::Right]) {
             (true, false) => {
                 input[MenuInput::Left] = false;
@@ -57,9 +63,25 @@ impl Menu {
         let new_y = (((self.grid_position.1 as i32 + movement_v) + GRID_ROWS as i32) % GRID_ROWS as i32) as usize;
         self.grid_position = (new_x, new_y);
 
-        if input[MenuInput::Accept] {
-            input[MenuInput::Accept] = false;
-            println!("{:?}", MENU_GRID[self.grid_position.1][self.grid_position.0]);
+        match (input[MenuInput::Accept], input[MenuInput::Cancel]) {
+            (true, false) => {
+                input[MenuInput::Accept] = false;
+                match MENU_GRID[self.grid_position.1][self.grid_position.0] {
+                    MenuTile::Option1 => MenuStatus::Game,
+                    MenuTile::Option2 => MenuStatus::Continue,
+                    MenuTile::Option3 => MenuStatus::Continue,
+                    MenuTile::Option4 => MenuStatus::Continue,
+                    MenuTile::Option5 => MenuStatus::Continue,
+                    MenuTile::Option6 => MenuStatus::Settings,
+                }
+            }
+            (false, true) => {
+                input[MenuInput::Cancel] = false;
+                MenuStatus::Exit
+            }
+            (_, _) => {
+                MenuStatus::Continue
+            }
         }
     }
 

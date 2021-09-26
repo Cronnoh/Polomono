@@ -1,4 +1,5 @@
 pub mod game_scene;
+pub mod menu_scene;
 
 use crate::assets::Assets;
 
@@ -20,7 +21,7 @@ pub enum SceneAction {
 
 pub enum Scene {
     Game(game_scene::GameScene),
-    Title,
+    MainMenu(menu_scene::MenuScene),
     Settings,
 }
 
@@ -50,7 +51,7 @@ impl SceneManager {
     pub fn update(&mut self, canvas: &mut WindowCanvas, assets: &mut Assets, input_events: Vec<sdl2::event::Event>, elapsed: u128) -> Result<(), String> {
         let next = match self.stack.last_mut().unwrap() {
             Scene::Game(game) => SceneManager::run_scene(game, canvas, assets, input_events, elapsed)?,
-            Scene::Title => SceneAction::Push(Scene::Game(game_scene::GameScene::new()?)),
+            Scene::MainMenu(menu) => SceneManager::run_scene(menu, canvas, assets, input_events, elapsed)?,
             Scene::Settings => SceneAction::Push(Scene::Game(game_scene::GameScene::new()?)),
         };
 
@@ -61,8 +62,8 @@ impl SceneManager {
     fn run_scene<T>(scene: &mut T, canvas: &mut WindowCanvas, assets: &mut Assets, input_events: Vec<sdl2::event::Event>, elapsed: u128) -> Result<SceneAction, String>
     where T: SceneTrait {
         scene.handle_input(input_events);
-        scene.update(elapsed);
+        let action = scene.update(elapsed);
         scene.render(canvas, assets)?;
-        Ok(SceneAction::Continue)
+        Ok(action)
     }
 }

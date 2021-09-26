@@ -43,7 +43,7 @@ fn main() -> Result<(), String> {
     assets.load_font(&ttf_context, &texture_creator, Path::new("assets/Hack-Bold.ttf"))?;
     assets.load_frame(&texture_creator, Path::new("assets/frame.png"))?;
 
-    let mut scene_manager = scenes::SceneManager::new(scenes::Scene::Game(scenes::game_scene::GameScene::new()?));
+    let mut scene_manager = scenes::SceneManager::new(scenes::Scene::MainMenu(scenes::menu_scene::MenuScene::new()?));
 
     let mut current_time = Instant::now();
     let mut event_pump = sdl_context.event_pump()?;

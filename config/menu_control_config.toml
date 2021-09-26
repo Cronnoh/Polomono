@@ -1,0 +1,13 @@
+"Key(W)" = "Up"
+"Key(S)" = "Down"
+"Key(A)" = "Left"
+"Key(D)" = "Right"
+"Key(J)" = "Accept"
+"Key(K)" = "Cancel"
+
+"Btn(dpup)" = "Up"
+"Btn(dpdown)" = "Down"
+"Btn(dpleft)" = "Left"
+"Btn(dpright)" = "Right"
+"Btn(b)" = "Accept"
+"Btn(a)" = "Cancel"
