@@ -1,11 +1,33 @@
+pub mod render;
+mod randomizer;
+mod piece;
+
+use piece::*;
+use randomizer::*;
+use crate::input::*;
+
+use std::collections::HashMap;
+use serde::Deserialize;
 use enum_map::EnumMap;
 
-use crate::piece::*;
-use crate::input::*;
-use crate::randomizer::*;
-use std::collections::HashMap;
-
 pub type Matrix = [Vec<PieceColor>];
+
+#[derive(Deserialize)]
+pub struct Config {
+    matrix_height: usize,
+    matrix_width: usize,
+
+    das: u32,
+    arr: u32,
+    gravity: u32,
+    lock_delay: u32,
+    preview_count: usize,
+
+    piece_list: Vec<String>,
+    cannot_start_with: Option<Vec<String>>,
+    starting_randomizer: Option<randomizer::RandomizerStyle>,
+    randomizer: randomizer::RandomizerStyle,
+}
 
 pub enum MovementAction {
     HardDrop,
@@ -51,10 +73,10 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(config: &crate::Config) -> Result<Self, String> {
+    pub fn new(config: &Config) -> Result<Self, String> {
         let matrix = vec![vec![PieceColor::Empty; config.matrix_width]; config.matrix_height+crate::OFFSCREEN_ROWS];
-        let piece_data = crate::load_data(std::path::Path::new("piece_data.toml"))?;
-        let kick_data = crate::load_data(std::path::Path::new("wall_kick_data.toml"))?;
+        let piece_data = crate::load_data(std::path::Path::new("data/piece_data.toml"))?;
+        let kick_data = crate::load_data(std::path::Path::new("data/wall_kick_data.toml"))?;
         validate_data(&piece_data, &kick_data, &config.piece_list)?;
 
         // Generate the first group of pieces with the initial randomizer style, than change it

@@ -1,11 +1,8 @@
-mod piece;
 mod game;
 mod input;
-mod render;
-mod randomizer;
+mod assets;
 mod menu;
 mod scenes;
-mod game_scene;
 
 use std::{path::Path, time::Instant};
 
@@ -14,26 +11,9 @@ use sdl2::{
     image::InitFlag,
     keyboard::Scancode,
 };
-use serde::{Deserialize, de::DeserializeOwned};
+use serde::{de::DeserializeOwned};
 
 const OFFSCREEN_ROWS: usize = 5;
-
-#[derive(Deserialize)]
-pub struct Config {
-    matrix_height: usize,
-    matrix_width: usize,
-
-    das: u32,
-    arr: u32,
-    gravity: u32,
-    lock_delay: u32,
-    preview_count: usize,
-
-    piece_list: Vec<String>,
-    cannot_start_with: Option<Vec<String>>,
-    starting_randomizer: Option<randomizer::RandomizerStyle>,
-    randomizer: randomizer::RandomizerStyle,
-}
 
 fn main() -> Result<(), String> {
     let sdl_context = sdl2::init()?;
@@ -58,17 +38,12 @@ fn main() -> Result<(), String> {
         .map_err(|e| e.to_string())?;
 
     let texture_creator = canvas.texture_creator();
-    let mut assets = render::Assets::new();
+    let mut assets = assets::Assets::new();
     assets.load_block_textures(&texture_creator, Path::new("assets/blocks.png"))?;
     assets.load_font(&ttf_context, &texture_creator, Path::new("assets/Hack-Bold.ttf"))?;
     assets.load_frame(&texture_creator, Path::new("assets/frame.png"))?;
 
-    let mut assets = render::Assets::new();
-    assets.load_block_textures(&texture_creator, Path::new("assets/blocks.png"))?;
-    assets.load_font(&ttf_context, &texture_creator, Path::new("assets/Hack-Bold.ttf"))?;
-    assets.load_frame(&texture_creator, Path::new("assets/frame.png"))?;
-
-    let mut scene_manager = scenes::SceneManager::new(scenes::Scene::Game(game_scene::GameScene::new()?));
+    let mut scene_manager = scenes::SceneManager::new(scenes::Scene::Game(scenes::game_scene::GameScene::new()?));
 
     let mut current_time = Instant::now();
     let mut event_pump = sdl_context.event_pump()?;

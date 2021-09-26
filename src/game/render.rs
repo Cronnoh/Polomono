@@ -1,112 +1,13 @@
-use crate::piece::{PieceColor, shape_dimensions, shape_top_left};
-use crate::game::Game;
+use super::Game;
+use super::piece::{Piece, shape_dimensions, shape_top_left};
+use crate::assets::Assets;
 use crate::OFFSCREEN_ROWS;
 
-use std::path::Path;
-use sdl2::ttf::Sdl2TtfContext;
-use sdl2::video::WindowContext;
 use sdl2::{
-    image::LoadTexture,
     pixels::Color,
     rect::{Rect, Point},
-    render::{WindowCanvas, Texture, BlendMode, TextureCreator},
-    ttf::Font,
+    render::{WindowCanvas, Texture},
 };
-
-pub struct Assets<'a, 'b> {
-    block_sheet: Option<Texture<'a>>,
-    block_sprites: Option<Vec<Rect>>,
-    stat_font: Option<Font<'a, 'b>>,
-    stat_labels: Option<Vec<Texture<'a>>>,
-    frame: Option<Texture<'a>>,
-}
-
-impl<'a, 'b> Assets<'a, 'b> {
-    pub fn new() -> Self {
-        Self {
-            block_sheet: None,
-            block_sprites: None,
-            stat_font: None,
-            stat_labels: None,
-            frame: None,
-        }
-    }
-
-    pub fn load_block_textures(&mut self, texture_creator: &'a TextureCreator<WindowContext>, path: &Path) -> Result<(), String> {
-        self.block_sheet = Some(texture_creator.load_texture(path)?);
-        if let Some(sheet) = &mut self.block_sheet {
-            self.block_sprites = Some(block_texture_regions(&sheet)?);
-            sheet.set_blend_mode(BlendMode::Blend);
-        }
-        Ok(())
-    }
-
-    pub fn load_font(&mut self, ttf_context: &'a Sdl2TtfContext, texture_creator: &'a TextureCreator<WindowContext>, path: &Path) -> Result<(), String> {
-        self.stat_font = Some(ttf_context.load_font(path, 28)?);
-        let label_font = ttf_context.load_font(path, 18)?;
-        let label_color = Color::RGB(144, 144, 144);
-        self.stat_labels = Some(vec![
-            create_text_texture("Score", label_color, &label_font, &texture_creator)?,
-            create_text_texture("Time", label_color, &label_font, &texture_creator)?,
-            create_text_texture("Lines", label_color, &label_font, &texture_creator)?,
-            create_text_texture("Pieces", label_color, &label_font, &texture_creator)?,
-        ]);
-
-        Ok(())
-    }
-
-    pub fn load_frame(&mut self, texture_creator: &'a TextureCreator<WindowContext>, path: &Path) -> Result<(), String> {
-        self.frame = Some(texture_creator.load_texture(path)?);
-        Ok(())
-    }
-
-    fn get_block_textures(&mut self) -> Result<(&mut Texture<'a>, &Vec<Rect>), String> {
-        let block_sheet = match &mut self.block_sheet {
-            Some(x) => x,
-            None => return Err("Block Spritesheet not loaded".to_string()),
-        };
-        let block_sprites = match &self.block_sprites {
-            Some(x) => x,
-            None => return Err("Block Sprites not loaded".to_string()),
-        };
-
-        Ok((block_sheet, block_sprites))
-    }
-
-    fn get_font(&self) -> Result<&Font, String> {
-        match &self.stat_font {
-            Some(x) => Ok(x),
-            None => Err("Font is not loaded".to_string()),
-        }
-    }
-
-    fn get_stat_labels(&self) -> Result<&Vec<Texture>, String> {
-        match &self.stat_labels {
-            Some(x) => Ok(x),
-            None => Err("Stat labels not loaded".to_string()),
-        }
-    }
-
-    fn get_frame(&self) -> Result<&Texture, String>{
-        match &self.frame {
-            Some(x) => Ok(x),
-            None => Err("Frame is not loaded".to_string()),
-        } 
-    }
-
-    fn create_stat_textures(&self, stats: &crate::game::Stats, texture_creator: &'a TextureCreator<WindowContext>) -> Result<Vec<Texture<'a>>, String> {
-        let font = self.get_font()?;
-        let color = Color::RGB(255, 255, 255);
-        let textures = vec![
-            create_text_texture(&stats.score.to_string(), color, font, &texture_creator)?,
-            create_text_texture(&format_time(stats.time), color, font, &texture_creator)?,
-            create_text_texture(&stats.lines_cleared.to_string(), color, font, &texture_creator)?,
-            create_text_texture(&stats.pieces_placed.to_string(), color, font, &texture_creator)?,
-        ];
-
-        Ok(textures)
-    }
-}
 
 pub fn render(canvas: &mut WindowCanvas, game: &Game, assets: &mut Assets) -> Result<(), String> {
     canvas.set_draw_color(Color::RGB(64, 64, 64));
@@ -142,7 +43,7 @@ fn draw_matrix(canvas: &mut WindowCanvas, matrix: &crate::game::Matrix, grid_squ
     Ok(())
 }
 
-fn draw_piece(canvas: &mut WindowCanvas, piece: &crate::piece::Piece, grid_square_size: u32, assets: &mut (&mut Texture, &Vec<Rect>)) -> Result<(), String> {
+fn draw_piece(canvas: &mut WindowCanvas, piece: &Piece, grid_square_size: u32, assets: &mut (&mut Texture, &Vec<Rect>)) -> Result<(), String> {
     let matrix_offset = Point::new(168, 16);
     let (block_sheet, block_sprites) = assets;
 
@@ -242,11 +143,11 @@ fn draw_frame(canvas: &mut WindowCanvas, assets: &Assets) -> Result<(), String> 
     canvas.copy(texture, None, Rect::new(frame_x, frame_y, query.width, query.height))
 }
 
-fn block_texture_regions(texture: &Texture) -> Result<Vec<Rect>, String> {
+pub fn block_texture_regions(texture: &Texture) -> Result<Vec<Rect>, String> {
     let mut regions = Vec::new();
     let query = texture.query();
 
-    for i in 0..PieceColor::ColorCount as i32 {
+    for i in 0..super::piece::PieceColor::ColorCount as i32 {
         let offset = i*query.height as i32;
         if offset >= query.width as i32 {
             return Err("Block texture file is not properly formed".to_string());
@@ -255,24 +156,6 @@ fn block_texture_regions(texture: &Texture) -> Result<Vec<Rect>, String> {
     }
 
     Ok(regions)
-}
-
-fn create_text_texture<'a, T>(text: &str, color: Color, font: &Font, texture_creator: &'a TextureCreator<T>) -> Result<Texture<'a>, String>{
-    let surface = font
-        .render(text)
-        .blended(color)
-        .map_err(|e| e.to_string())?;
-    texture_creator.create_texture_from_surface(&surface)
-        .map_err(|e| e.to_string())
-}
-
-fn format_time(microseconds: u128) -> String {
-    let hundredths = (microseconds % 1000000) / 10000;
-    let total_seconds = microseconds / 1000000;
-    let seconds = total_seconds % 60;
-    let minutes = total_seconds / 60;
-
-    format!("{:>0width$}:{:>0width$}.{:>0width$}", minutes, seconds, hundredths, width=2)
 }
 
 fn get_grid_position(column: i32, row: i32, grid_square_size: u32, matrix_offset: Point) -> Point {

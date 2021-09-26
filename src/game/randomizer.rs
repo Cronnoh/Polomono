@@ -1,9 +1,9 @@
+use super::piece::{Piece, PieceColor, PieceShape, PieceType, shape_dimensions, shape_top_left};
+
 use std::collections::HashMap;
 
 use rand::Rng;
 use serde::Deserialize;
-
-use crate::piece::{Piece, PieceColor, PieceShape, PieceType, shape_dimensions, shape_top_left};
 
 #[derive(Deserialize, Clone, Copy)]
 pub enum RandomizerStyle {

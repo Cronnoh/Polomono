@@ -1,6 +1,7 @@
+use crate::input::MenuInput;
+
 use sdl2::{pixels::Color, rect::Rect, render::WindowCanvas};
 use enum_map::EnumMap;
-use crate::input::MenuInput;
 
 const GRID_COLUMNS: usize = 2;
 const GRID_ROWS: usize = 3;

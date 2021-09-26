@@ -1,6 +1,8 @@
-use sdl2::render::WindowCanvas;
+pub mod game_scene;
 
-use crate::{game_scene, menu, render::Assets};
+use crate::assets::Assets;
+
+use sdl2::render::WindowCanvas;
 
 pub trait SceneTrait {
     // fn start();

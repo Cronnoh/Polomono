@@ -1,4 +1,4 @@
-use crate::game::Matrix;
+use super::Matrix;
 
 use std::{cmp::{max, min}, collections::HashMap};
 use rand::{distributions::Standard, prelude::Distribution};
