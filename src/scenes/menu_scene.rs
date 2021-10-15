@@ -44,8 +44,8 @@ impl SceneTrait for MenuScene {
         }
     }
 
-    fn render(&self, canvas: &mut WindowCanvas, _assets: &mut Assets) -> Result<(), String> {
-        self.menu.render(canvas);
+    fn render(&self, canvas: &mut WindowCanvas, assets: &mut Assets) -> Result<(), String> {
+        crate::menu::render::render(&self.menu, canvas, assets);
         Ok(())
     }
 }

@@ -38,7 +38,7 @@ fn main() -> Result<(), String> {
         .map_err(|e| e.to_string())?;
 
     let texture_creator = canvas.texture_creator();
-    let mut assets = assets::Assets::new();
+    let mut assets = assets::Assets::new(&texture_creator)?;
     assets.load_block_textures(&texture_creator, Path::new("assets/blocks.png"))?;
     assets.load_font(&ttf_context, &texture_creator, Path::new("assets/Hack-Bold.ttf"))?;
     assets.load_frame(&texture_creator, Path::new("assets/frame.png"))?;

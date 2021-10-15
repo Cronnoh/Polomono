@@ -15,17 +15,34 @@ pub struct Assets<'a, 'b> {
     stat_font: Option<Font<'a, 'b>>,
     stat_labels: Option<Vec<Texture<'a>>>,
     frame: Option<Texture<'a>>,
+
+    // Menu Textures
+    pub menu_sheet: Texture<'a>,
+    pub menu_tile: Rect,
+    pub menu_tile_selected: Rect,
+    pub menu_page_arrow: Rect,
+    pub menu_page_dot: Rect,
+    pub menu_page_dot_selected: Rect,
 }
 
 impl<'a, 'b> Assets<'a, 'b> {
-    pub fn new() -> Self {
-        Self {
+    pub fn new(texture_creator: &'a TextureCreator<WindowContext>) -> Result<Self, String> {
+        let menu_sheet = texture_creator.load_texture("assets/menu.png")?;
+
+        Ok(Self {
             block_sheet: None,
             block_sprites: None,
             stat_font: None,
             stat_labels: None,
             frame: None,
-        }
+
+            menu_sheet,
+            menu_tile: Rect::new(0, 80, 298, 72),
+            menu_tile_selected: Rect::new(0, 0, 298, 80),
+            menu_page_arrow: Rect::new(0, 152, 6, 10),
+            menu_page_dot: Rect::new(6, 152, 10, 10),
+            menu_page_dot_selected: Rect::new(16, 152, 10, 10),
+        })
     }
 
     pub fn load_block_textures(&mut self, texture_creator: &'a TextureCreator<WindowContext>, path: &Path) -> Result<(), String> {

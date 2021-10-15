@@ -1,6 +1,6 @@
+pub mod render;
 use crate::input::MenuInput;
 
-use sdl2::{pixels::Color, rect::Rect, render::WindowCanvas};
 use enum_map::EnumMap;
 
 const GRID_COLUMNS: usize = 2;
@@ -59,8 +59,8 @@ impl Menu {
             _ => 0,
         };
 
-        let new_x = (((self.grid_position.0 as i32 + movement_h) + GRID_COLUMNS as i32) % GRID_COLUMNS as i32) as usize;
-        let new_y = (((self.grid_position.1 as i32 + movement_v) + GRID_ROWS as i32) % GRID_ROWS as i32) as usize;
+        let new_x = (self.grid_position.0 as i32 + movement_h).rem_euclid(GRID_COLUMNS as i32) as usize;
+        let new_y = (self.grid_position.1 as i32 + movement_v).rem_euclid(GRID_ROWS as i32) as usize;
         self.grid_position = (new_x, new_y);
 
         match (input[MenuInput::Accept], input[MenuInput::Cancel]) {
@@ -84,29 +84,4 @@ impl Menu {
             }
         }
     }
-
-    pub fn render(&self, canvas: &mut WindowCanvas) {
-        canvas.set_draw_color(Color::RGB(64, 64, 64));
-        for (y, row) in MENU_GRID.iter().enumerate() {
-            for (x, tile) in row.iter().enumerate() {
-                draw_tile(canvas, tile, (x ,y));
-            }
-        }
-        canvas.set_draw_color(Color::RGB(255, 255, 255));
-        canvas.draw_rect(Rect::new(self.grid_position.0 as i32 * 270, self.grid_position.1 as i32 * 100, 270, 100)).unwrap();
-        canvas.present();
-    }
-}
-
-fn draw_tile(canvas: &mut WindowCanvas, tile: &MenuTile, position: (usize, usize)) {
-    let color = match *tile {
-        MenuTile::Option1 => Color::RGB(255, 0, 0),
-        MenuTile::Option2 => Color::RGB(255, 255, 0),
-        MenuTile::Option3 => Color::RGB(0, 255, 0),
-        MenuTile::Option4 => Color::RGB(0, 255, 255),
-        MenuTile::Option5 => Color::RGB(0, 0, 255),
-        MenuTile::Option6 => Color::RGB(255, 0, 255),
-    };
-    canvas.set_draw_color(color);
-    canvas.fill_rect(Rect::new(position.0 as i32 * 270, position.1 as i32 * 100, 270, 100)).unwrap();
 }
