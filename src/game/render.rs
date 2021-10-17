@@ -1,6 +1,6 @@
 use super::Game;
+use super::assets::GameAssets;
 use super::piece::{Piece, shape_dimensions, shape_top_left};
-use crate::assets::Assets;
 use crate::OFFSCREEN_ROWS;
 
 use sdl2::{
@@ -9,18 +9,17 @@ use sdl2::{
     render::{WindowCanvas, Texture},
 };
 
-pub fn render(canvas: &mut WindowCanvas, game: &Game, assets: &mut Assets) -> Result<(), String> {
+pub fn render(canvas: &mut WindowCanvas, game: &Game, assets: &mut GameAssets) -> Result<(), String> {
     canvas.set_draw_color(Color::RGB(64, 64, 64));
     canvas.clear();
 
     // Scale the grid appropriately based on the size of the matrix
     let grid_square_size = std::cmp::min(16 * 20 / (game.matrix.len() - OFFSCREEN_ROWS), 16 * 10 / game.matrix[0].len()) as u32;
-    let mut block_assets = assets.get_block_textures()?;
 
-    draw_matrix(canvas, &game.matrix, grid_square_size, &mut block_assets)?;
-    draw_piece(canvas, &game.piece, grid_square_size, &mut block_assets)?;
-    draw_preview(canvas, game, &block_assets)?;
-    draw_held(canvas, game, &block_assets)?;
+    draw_matrix(canvas, &game.matrix, grid_square_size, assets)?;
+    draw_piece(canvas, &game.piece, grid_square_size, assets)?;
+    draw_preview(canvas, game, assets)?;
+    draw_held(canvas, game, assets)?;
     draw_stats(canvas, &game.stats, assets)?;
     draw_frame(canvas, assets)?;
 
@@ -28,24 +27,22 @@ pub fn render(canvas: &mut WindowCanvas, game: &Game, assets: &mut Assets) -> Re
     Ok(())
 }
 
-fn draw_matrix(canvas: &mut WindowCanvas, matrix: &crate::game::Matrix, grid_square_size: u32, assets: &mut (&mut Texture, &Vec<Rect>)) -> Result<(), String> {
+fn draw_matrix(canvas: &mut WindowCanvas, matrix: &crate::game::Matrix, grid_square_size: u32, assets: &mut GameAssets) -> Result<(), String> {
     let matrix_offset = Point::new(168, 16);
-    let (block_sheet, block_sprites) = assets;
 
-    block_sheet.set_alpha_mod(255);
+    assets.block_sheet.set_alpha_mod(255);
     for (i, row) in matrix.iter().skip(OFFSCREEN_ROWS).enumerate() {
         for (j, color) in row.iter().enumerate() {
             let point = Point::new(j as i32, i as i32) * grid_square_size as i32 + matrix_offset;
-            canvas.copy(block_sheet, block_sprites[*color as usize], Rect::new(point.x, point.y, grid_square_size, grid_square_size))?;
+            canvas.copy(&assets.block_sheet, assets.block_sprites[*color as usize], Rect::new(point.x, point.y, grid_square_size, grid_square_size))?;
         }
     }
 
     Ok(())
 }
 
-fn draw_piece(canvas: &mut WindowCanvas, piece: &Piece, grid_square_size: u32, assets: &mut (&mut Texture, &Vec<Rect>)) -> Result<(), String> {
+fn draw_piece(canvas: &mut WindowCanvas, piece: &Piece, grid_square_size: u32, assets: &mut GameAssets) -> Result<(), String> {
     let matrix_offset = Point::new(168, 16);
-    let (block_sheet, block_sprites) = assets;
 
     /*
     Ghost Piece is drawn transparently over a white background to brighten it up and create an outline.
@@ -54,7 +51,7 @@ fn draw_piece(canvas: &mut WindowCanvas, piece: &Piece, grid_square_size: u32, a
 
     // Draw ghost piece outline
     canvas.set_draw_color(Color::RGB(255, 255, 255));
-    block_sheet.set_alpha_mod(255);
+    assets.block_sheet.set_alpha_mod(255);
     for (col, row) in piece.get_orientation().iter() {
         if *row as i32 + piece.ghost_position >= OFFSCREEN_ROWS as i32 {
             let pos = get_grid_position(*col as i32 + piece.position.col, *row as i32 + piece.ghost_position - OFFSCREEN_ROWS as i32, grid_square_size, matrix_offset);
@@ -63,28 +60,27 @@ fn draw_piece(canvas: &mut WindowCanvas, piece: &Piece, grid_square_size: u32, a
     }
 
     // Draw ghost piece
-    block_sheet.set_alpha_mod(192);
+    assets.block_sheet.set_alpha_mod(192);
     for (col, row) in piece.get_orientation().iter() {
         if *row as i32 + piece.ghost_position >= OFFSCREEN_ROWS as i32 {
             let pos = get_grid_position(*col as i32 + piece.position.col, *row as i32 + piece.ghost_position - OFFSCREEN_ROWS as i32, grid_square_size, matrix_offset);
-            canvas.copy(block_sheet, block_sprites[piece.color as usize], Rect::new(pos.x, pos.y, grid_square_size, grid_square_size))?;
+            canvas.copy(&assets.block_sheet, assets.block_sprites[piece.color as usize], Rect::new(pos.x, pos.y, grid_square_size, grid_square_size))?;
         }
     }
 
     // Draw piece
-    block_sheet.set_alpha_mod(255);
+    assets.block_sheet.set_alpha_mod(255);
     for (col, row) in piece.get_orientation().iter() {
         if *row as i32 + piece.position.row >= OFFSCREEN_ROWS as i32 {
             let pos = get_grid_position(*col as i32 + piece.position.col, *row as i32 + piece.position.row - OFFSCREEN_ROWS as i32, grid_square_size, matrix_offset);
-            canvas.copy(block_sheet, block_sprites[piece.color as usize], Rect::new(pos.x, pos.y, grid_square_size, grid_square_size))?;
+            canvas.copy(&assets.block_sheet, assets.block_sprites[piece.color as usize], Rect::new(pos.x, pos.y, grid_square_size, grid_square_size))?;
         }
     }
 
     Ok(())
 }
 
-fn draw_preview(canvas: &mut WindowCanvas, game: &Game, assets: &(&mut Texture, &Vec<Rect>)) -> Result<(), String> {
-    let (block_sheet, block_sprites) = assets;
+fn draw_preview(canvas: &mut WindowCanvas, game: &Game, assets: &mut GameAssets) -> Result<(), String> {
     let preview_offset_x = 336;
     let preview_offset_y = 16;
     let preview_piece_box_size = 48;
@@ -92,34 +88,32 @@ fn draw_preview(canvas: &mut WindowCanvas, game: &Game, assets: &(&mut Texture, 
 
     for (i, piece) in game.get_preview_pieces().iter().rev().enumerate() {
         let offset_y = preview_offset_y + (preview_piece_box_size * i);
-        draw_centered_piece(canvas, &block_sheet, &block_sprites[piece.color as usize], &piece.shape[0], preview_offset_x, offset_y, preview_piece_box_size, size)?;
+        draw_centered_piece(canvas, &assets.block_sheet, &assets.block_sprites[piece.color as usize], &piece.shape[0], preview_offset_x, offset_y, preview_piece_box_size, size)?;
     }
     Ok(())
 }
 
-fn draw_held(canvas: &mut WindowCanvas, game: &Game, assets: &(&mut Texture, &Vec<Rect>)) -> Result<(), String> {
+fn draw_held(canvas: &mut WindowCanvas, game: &Game, assets: &mut GameAssets) -> Result<(), String> {
     if let Some(held) = &game.held {
-        let (block_sheet, block_sprites) = assets;
         let hold_offset_x = 112;
         let hold_offset_y = 16;
         let hold_box_size = 48;
         let size = 10;
 
-        draw_centered_piece(canvas, &block_sheet, &block_sprites[held.color as usize], &held.shape[0], hold_offset_x, hold_offset_y, hold_box_size, size)?;
+        draw_centered_piece(canvas, &assets.block_sheet, &assets.block_sprites[held.color as usize], &held.shape[0], hold_offset_x, hold_offset_y, hold_box_size, size)?;
     }
     Ok(())
 }
 
-fn draw_stats(canvas: &mut WindowCanvas, stats: &crate::game::Stats, assets: &mut Assets) -> Result<(), String> {
+fn draw_stats(canvas: &mut WindowCanvas, stats: &crate::game::Stats, assets: &mut GameAssets) -> Result<(), String> {
     let texture_creator = canvas.texture_creator();
     let mut stat_textures = assets.create_stat_textures(&stats, &texture_creator)?;
     let stats_offset_x = 440;
     let stats_offset_y = 28;
     let label_number_spacing = 18;
     let vertical_stat_spacing = 75;
-    let labels = assets.get_stat_labels()?;
 
-    for (i, (number, label)) in stat_textures.iter_mut().zip(labels).enumerate() {
+    for (i, (number, label)) in stat_textures.iter_mut().zip(&assets.stat_labels).enumerate() {
         let label_query = label.query();
         let label_y = stats_offset_y + vertical_stat_spacing * i as i32;
         canvas.copy(&label, None, Rect::new(stats_offset_x, label_y, label_query.width, label_query.height))?;
@@ -135,27 +129,11 @@ fn draw_stats(canvas: &mut WindowCanvas, stats: &crate::game::Stats, assets: &mu
     Ok(())
 }
 
-fn draw_frame(canvas: &mut WindowCanvas, assets: &Assets) -> Result<(), String> {
+fn draw_frame(canvas: &mut WindowCanvas, assets: &GameAssets) -> Result<(), String> {
     let frame_x = 104;
     let frame_y = 8;
-    let texture = assets.get_frame()?;
-    let query = texture.query();
-    canvas.copy(texture, None, Rect::new(frame_x, frame_y, query.width, query.height))
-}
-
-pub fn block_texture_regions(texture: &Texture) -> Result<Vec<Rect>, String> {
-    let mut regions = Vec::new();
-    let query = texture.query();
-
-    for i in 0..super::piece::PieceColor::ColorCount as i32 {
-        let offset = i*query.height as i32;
-        if offset >= query.width as i32 {
-            return Err("Block texture file is not properly formed".to_string());
-        }
-        regions.push(Rect::new(offset, 0, query.height, query.height));
-    }
-
-    Ok(regions)
+    let query = assets.frame.query();
+    canvas.copy(&assets.frame, None, Rect::new(frame_x, frame_y, query.width, query.height))
 }
 
 fn get_grid_position(column: i32, row: i32, grid_square_size: u32, matrix_offset: Point) -> Point {

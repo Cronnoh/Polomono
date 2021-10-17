@@ -43,6 +43,6 @@ impl SceneTrait for GameScene {
     }
 
     fn render(&self, canvas: &mut sdl2::render::WindowCanvas, assets: &mut Assets) -> Result<(), String> {
-        render::render(canvas, &self.game, assets)
+        render::render(canvas, &self.game, assets.get_game_assets()?)
     }
 }

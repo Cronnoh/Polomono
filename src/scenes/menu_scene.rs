@@ -1,8 +1,8 @@
 use super::{Scene, SceneAction, SceneTrait};
-use super::{game_scene::GameScene};
+use super::game_scene::GameScene;
 
 use crate::{
-    menu::{Menu, MenuStatus},
+    menu::{self, Menu, MenuStatus},
     assets::Assets,
     input::{self, MenuInput},
 };
@@ -45,7 +45,7 @@ impl SceneTrait for MenuScene {
     }
 
     fn render(&self, canvas: &mut WindowCanvas, assets: &mut Assets) -> Result<(), String> {
-        crate::menu::render::render(&self.menu, canvas, assets);
+        menu::render::render(&self.menu, canvas, assets.get_menu_assets()?);
         Ok(())
     }
 }

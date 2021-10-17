@@ -1,4 +1,5 @@
 pub mod render;
+pub mod assets;
 use crate::input::MenuInput;
 
 use enum_map::EnumMap;

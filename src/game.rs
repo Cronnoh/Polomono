@@ -1,4 +1,5 @@
 pub mod render;
+pub mod assets;
 mod randomizer;
 mod piece;
 

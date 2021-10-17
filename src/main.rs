@@ -4,7 +4,7 @@ mod assets;
 mod menu;
 mod scenes;
 
-use std::{path::Path, time::Instant};
+use std::time::Instant;
 
 use sdl2::{
     event::Event,
@@ -38,10 +38,7 @@ fn main() -> Result<(), String> {
         .map_err(|e| e.to_string())?;
 
     let texture_creator = canvas.texture_creator();
-    let mut assets = assets::Assets::new(&texture_creator)?;
-    assets.load_block_textures(&texture_creator, Path::new("assets/blocks.png"))?;
-    assets.load_font(&ttf_context, &texture_creator, Path::new("assets/Hack-Bold.ttf"))?;
-    assets.load_frame(&texture_creator, Path::new("assets/frame.png"))?;
+    let mut assets = assets::Assets::new(&texture_creator, &ttf_context)?;
 
     let mut scene_manager = scenes::SceneManager::new(scenes::Scene::MainMenu(scenes::menu_scene::MenuScene::new()?));
 
