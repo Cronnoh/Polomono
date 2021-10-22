@@ -15,7 +15,7 @@ pub struct GameScene {
     game: Game,
     inputs: EnumMap<GameInput, bool>,
     // piece_data: HashMap<String, PieceType>,
-    // ruleset: Ruleset,
+    // gamemode_name: String,
 }
 
 impl GameScene {

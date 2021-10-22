@@ -1,0 +1,6 @@
+(
+    end_condition: Score(100000),
+    goal: Score,
+    level_up_style: RuleChange(["marathon", "ruleset1", "marathon"]),
+    initial_ruleset: "ruleset1",
+)

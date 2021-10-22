@@ -2,10 +2,12 @@ pub mod render;
 pub mod assets;
 mod randomizer;
 mod piece;
+mod configuration;
 
 use piece::*;
 use randomizer::*;
-use crate::input::*;
+use crate::{input::*, load_data_ron};
+use configuration::{GameMode, Ruleset};
 
 use std::collections::HashMap;
 use serde::Deserialize;
@@ -15,19 +17,8 @@ pub type Matrix = [Vec<PieceColor>];
 
 #[derive(Deserialize)]
 pub struct Config {
-    matrix_height: usize,
-    matrix_width: usize,
-
     das: u32,
     arr: u32,
-    gravity: u32,
-    lock_delay: u32,
-    preview_count: usize,
-
-    piece_list: Vec<String>,
-    cannot_start_with: Option<Vec<String>>,
-    starting_randomizer: Option<randomizer::RandomizerStyle>,
-    randomizer: randomizer::RandomizerStyle,
 }
 
 pub enum MovementAction {
@@ -45,20 +36,33 @@ pub struct Stats {
     pub pieces_placed: u32,
 }
 
+impl Stats {
+    fn new() -> Self {
+        Self {
+            score: 0,
+            time: 0,
+            lines_cleared: 0,
+            pieces_placed: 0,
+        }
+    }
+}
+
 pub struct Game {
-    pub matrix: Vec<Vec<PieceColor>>,
-    pub piece: Piece,
-    pub held: Option<Piece>,
-    pub piece_data: HashMap<String, PieceType>,
+    matrix: Vec<Vec<PieceColor>>,
+    piece: Piece,
+    held: Option<Piece>,
+    piece_data: HashMap<String, PieceType>,
     kick_data: HashMap<String, KickData>,
     piece_queue: Vec<Piece>,
-    pub stats: Stats,
+    gamemode: GameMode,
+    ruleset: Ruleset,
+    stats: Stats,
+    level_stats: Stats,
     randomizer: Randomizer,
+    level: usize,
 
     das: u128, // Delayed Auto-Shift - Time in µs that left/right must be held before auto-shift begins
     arr: u128, // Auto-Repeat Rate - Time in µs the stays in each play during auto-shift
-    gravity: u128, // Time in µs the piece stays in each row while falling
-    lock_delay: u128, // Time in µs that the piece can stay grounded without locking into place
 
     /* Timer fields count upward to the above related values */
     das_timer: u128,
@@ -66,7 +70,6 @@ pub struct Game {
     lock_timer: u128,
     arr_leftover: u128, // Remainder of arr time from the previous update, should add to elapsed time
 
-    preview_count: usize,
     can_hold: bool,
     prev_clear_was_fancy: bool,
     prev_direction: HDirection,
@@ -75,28 +78,28 @@ pub struct Game {
 
 impl Game {
     pub fn new(config: &Config) -> Result<Self, String> {
-        let matrix = vec![vec![PieceColor::Empty; config.matrix_width]; config.matrix_height+crate::OFFSCREEN_ROWS];
+        let gamemode: GameMode = load_data_ron(std::path::Path::new("data/gamemodes/gamemode1.ron"))?;
+        let ruleset: Ruleset = load_data_ron(std::path::Path::new(&format!("data/rulesets/{}.ron", gamemode.initial_ruleset)))?;
+
+        let matrix = vec![vec![PieceColor::Empty; ruleset.matrix_width]; ruleset.matrix_height+crate::OFFSCREEN_ROWS];
         let piece_data = crate::load_data(std::path::Path::new("data/piece_data.toml"))?;
         let kick_data = crate::load_data(std::path::Path::new("data/wall_kick_data.toml"))?;
-        validate_data(&piece_data, &kick_data, &config.piece_list)?;
+        validate_data(&piece_data, &kick_data, &ruleset.piece_list)?;
 
         // Generate the first group of pieces with the initial randomizer style, than change it
-        let starting_randomizer = match config.starting_randomizer {
+        let starting_randomizer = match ruleset.starting_randomizer {
             Some(x) => x,
-            None => config.randomizer,
+            None => ruleset.randomizer,
         };
-        let mut randomizer = Randomizer::new(config.piece_list.clone(), starting_randomizer);
-        let mut piece_queue = randomizer.generate_pieces(&config.cannot_start_with, &piece_data);
-        randomizer.style = config.randomizer;
-        extend_queue(&mut piece_queue, config.preview_count, &piece_data, &mut randomizer);
+        let mut randomizer = Randomizer::new(ruleset.piece_list.clone(), starting_randomizer);
+        let mut piece_queue = randomizer.generate_pieces(&ruleset.cannot_start_with, &piece_data);
+        randomizer.style = ruleset.randomizer;
+        extend_queue(&mut piece_queue, ruleset.preview_count, &piece_data, &mut randomizer);
         let piece = next_piece(&mut piece_queue, &matrix);
 
-        let stats = Stats {
-            score: 0,
-            time: 0,
-            lines_cleared: 0,
-            pieces_placed: 0,
-        };
+        let stats = Stats::new();
+
+        let level_stats = Stats::new();
 
         Ok(Self {
             matrix,
@@ -105,21 +108,22 @@ impl Game {
             piece_data,
             kick_data,
             piece_queue,
+            gamemode,
+            ruleset,
             stats,
+            level_stats,
             randomizer,
+            level: 0,
 
             // Config values are in milliseconds, must be converted to microseconds
             das: config.das as u128 * 1000,
             arr: config.arr as u128 * 1000,
-            gravity: config.gravity as u128 * 1000,
-            lock_delay: config.lock_delay as u128 * 1000,
 
             das_timer: 0,
             gravity_timer: 0,
             lock_timer: 0,
             arr_leftover: 0,
 
-            preview_count: config.preview_count,
             can_hold: true,
             prev_clear_was_fancy: false,
             prev_direction: HDirection::None,
@@ -128,10 +132,18 @@ impl Game {
     }
 
     pub fn update(&mut self, input: &mut EnumMap<GameInput, bool>, elapsed: u128) {
+        if self.gamemode.end_condition.check(&self.stats) {
+            return;
+        }
+        if self.ruleset.level_up_condition.check(&self.level_stats) {
+            self.level_up();
+        }
+
         if self.game_over {
             return;
         }
         self.stats.time += elapsed;
+        self.level_stats.time += elapsed;
         let (movement_action, rotation_action) = read_inputs(&input);
         let mut placed_piece = false;
 
@@ -165,12 +177,12 @@ impl Game {
                 input[GameInput::Rotate180] = false;
                 if self.piece.rotate(&self.matrix, &self.kick_data, rotation_action) {
                     /* Reduce the lock timer after a successful rotation to make spins easier */
-                    self.lock_timer = std::cmp::max(0, self.lock_timer as i128 - self.lock_delay as i128/4) as u128;
+                    self.lock_timer = std::cmp::max(0, self.lock_timer as i128 - self.ruleset.lock_delay as i128/4) as u128;
                 }
             }
         }
 
-        if input[GameInput::Hold] {
+        if self.ruleset.hold_enabled && input[GameInput::Hold] {
             input[GameInput::Hold] = false;
             self.hold_piece();
         }
@@ -179,7 +191,7 @@ impl Game {
 
         if self.piece.is_grounded(&self.matrix) {
             self.lock_timer += elapsed;
-            placed_piece = placed_piece || self.lock_timer >= self.lock_delay;
+            placed_piece = placed_piece || self.lock_timer >= self.ruleset.lock_delay;
         } else {
             self.lock_timer = 0;
         }
@@ -193,8 +205,9 @@ impl Game {
             self.direction_change(HDirection::None);
             self.can_hold = true;
             self.stats.pieces_placed += 1;
+            self.level_stats.pieces_placed += 1;
             self.handle_line_clears(bonus);
-            extend_queue(&mut self.piece_queue, self.preview_count, &self.piece_data, &mut self.randomizer);
+            extend_queue(&mut self.piece_queue, self.ruleset.preview_count, &self.piece_data, &mut self.randomizer);
             self.piece = next_piece(&mut self.piece_queue, &self.matrix);
         }
     }
@@ -225,7 +238,7 @@ impl Game {
     }
 
     fn gravity(&mut self, elapsed: u128, speed_up: bool) {
-        let mut gravity = self.gravity;
+        let mut gravity = self.ruleset.gravity;
         if speed_up {
             gravity /= 4;
             self.gravity_timer = std::cmp::min(self.gravity_timer, gravity);
@@ -244,12 +257,13 @@ impl Game {
         if !cleared_lines.is_empty() {
             self.update_score(cleared_lines.len() as u32, bonus);
             self.stats.lines_cleared += cleared_lines.len() as u32;
+            self.level_stats.lines_cleared += cleared_lines.len() as u32;
             remove_rows(&mut self.matrix, cleared_lines);
         }
     }
 
     pub fn get_preview_pieces(&self) -> &[Piece] {
-        &self.piece_queue[self.piece_queue.len()-self.preview_count..]
+        &self.piece_queue[self.piece_queue.len()-self.ruleset.preview_count..]
     }
 
     fn hold_piece(&mut self) {
@@ -263,7 +277,7 @@ impl Game {
                 std::mem::swap(&mut self.piece, held);
             }
             None => {
-                extend_queue(&mut self.piece_queue, self.preview_count, &self.piece_data, &mut self.randomizer);
+                extend_queue(&mut self.piece_queue, self.ruleset.preview_count, &self.piece_data, &mut self.randomizer);
                 let next = next_piece(&mut self.piece_queue, &self.matrix);
                 self.held = Some(std::mem::replace(&mut self.piece, next));
             }
@@ -286,9 +300,11 @@ impl Game {
         if self.prev_clear_was_fancy && fancy {
             points += (points as f64 * 0.5) as u32;
         }
+        points = self.ruleset.score_multiplier.apply(points, self.level);
 
         self.prev_clear_was_fancy = fancy;
         self.stats.score += points;
+        self.level_stats.score += points;
     }
 
     /* Lose is the piece is placed entirely offscreen */
@@ -306,6 +322,21 @@ impl Game {
         self.das_timer = 0;
         self.arr_leftover = 0;
         self.prev_direction = direction;
+    }
+
+    fn level_up(&mut self) {
+        self.level += 1;
+        self.level_stats = Stats::new();
+        self.gamemode.level_up(&mut self.ruleset, self.level);
+        let prev_style = self.randomizer.style; 
+        self.randomizer = Randomizer::new(self.ruleset.piece_list.clone(), self.ruleset.randomizer);
+        if self.randomizer.style != prev_style {
+            // Remove pieces in the piece queue so that the newer randomizer takes effect sooner
+            // Leave some pieces to reduce jarring changes
+            let leftovers = 3;
+            self.piece_queue.drain(0..(self.piece_queue.len()-leftovers));
+            extend_queue(&mut self.piece_queue, self.ruleset.preview_count, &self.piece_data, &mut self.randomizer);
+        }
     }
 }
 

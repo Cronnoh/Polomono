@@ -1,13 +1,2 @@
-matrix_height = 20
-matrix_width = 10
-
 das = 100
 arr = 0
-gravity = 250
-lock_delay = 500
-preview_count = 5
-
-piece_list = ["I", "T", "O", "J", "L", "S", "Z"]
-cannot_start_with = ["O", "S", "Z"]
-starting_randomizer = "DoubleNBag"
-randomizer = "NBag"

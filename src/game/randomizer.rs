@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use rand::Rng;
 use serde::Deserialize;
 
-#[derive(Deserialize, Clone, Copy)]
+#[derive(Deserialize, Clone, Copy, std::cmp::PartialEq)]
 pub enum RandomizerStyle {
     NBag, // A randomized list of all pieces once
     DoubleNBag, // A randomized list containing each piece twice

@@ -42,6 +42,9 @@ fn main() -> Result<(), String> {
 
     let mut scene_manager = scenes::SceneManager::new(scenes::Scene::MainMenu(scenes::menu_scene::MenuScene::new()?));
 
+    // let r2: game::rulesets::Ruleset = load_data_ron(std::path::Path::new("data/rulesets/ruleset1.ron"))?;
+    // println!("{:?}", r2);
+
     let mut current_time = Instant::now();
     let mut event_pump = sdl_context.event_pump()?;
     'running: loop {
@@ -73,5 +76,12 @@ fn load_data<T: DeserializeOwned>(file_path: &std::path::Path) -> Result<T, Stri
     let data_file = std::fs::read_to_string(file_path)
         .map_err(|e| format!("Error opening {}: {}", file_path.to_str().unwrap(), e.to_string()))?;
     toml::from_str(&data_file)
+        .map_err(|e| format!("Error reading {}: {}", file_path.to_str().unwrap(), e.to_string()))
+}
+
+fn load_data_ron<T: DeserializeOwned>(file_path: &std::path::Path) -> Result<T, String> {
+    let data_file = std::fs::read_to_string(file_path)
+        .map_err(|e| format!("Error opening {}: {}", file_path.to_str().unwrap(), e.to_string()))?;
+    ron::from_str(&data_file)
         .map_err(|e| format!("Error reading {}: {}", file_path.to_str().unwrap(), e.to_string()))
 }
