@@ -20,7 +20,7 @@ pub fn render(canvas: &mut WindowCanvas, game: &Game, assets: &mut GameAssets) -
     let grid_square_size = std::cmp::min(MATRIX_FRAME_HEIGHT / (game.matrix.len() - OFFSCREEN_ROWS), MATRIX_FRAME_WIDTH / game.matrix[0].len()) as u32;
 
     draw_matrix(canvas, &game.matrix, grid_square_size, assets)?;
-    draw_piece(canvas, &game.piece, grid_square_size, assets)?;
+    draw_piece(canvas, &game.piece, grid_square_size, assets, game.ruleset.ghost_piece_enabled)?;
     draw_preview(canvas, game, assets)?;
     draw_held(canvas, game, assets)?;
     draw_stats(canvas, &game.stats, assets)?;
@@ -44,30 +44,32 @@ fn draw_matrix(canvas: &mut WindowCanvas, matrix: &crate::game::Matrix, grid_squ
     Ok(())
 }
 
-fn draw_piece(canvas: &mut WindowCanvas, piece: &Piece, grid_square_size: u32, assets: &mut GameAssets) -> Result<(), String> {
+fn draw_piece(canvas: &mut WindowCanvas, piece: &Piece, grid_square_size: u32, assets: &mut GameAssets, draw_ghost: bool) -> Result<(), String> {
     let matrix_offset = Point::new(168, 16);
 
-    /*
-    Ghost Piece is drawn transparently over a white background to brighten it up and create an outline.
-    The regular piece is draw afterward so that it is on top when it intersects with the ghost piece.
-    */
+    if draw_ghost {
+        /*
+        Ghost Piece is drawn transparently over a white background to brighten it up and create an outline.
+        The regular piece is draw afterward so that it is on top when it intersects with the ghost piece.
+        */
 
-    // Draw ghost piece outline
-    canvas.set_draw_color(Color::RGB(255, 255, 255));
-    assets.block_sheet.set_alpha_mod(255);
-    for (col, row) in piece.get_orientation().iter() {
-        if *row as i32 + piece.ghost_position >= OFFSCREEN_ROWS as i32 {
-            let pos = get_grid_position(*col as i32 + piece.position.col, *row as i32 + piece.ghost_position - OFFSCREEN_ROWS as i32, grid_square_size, matrix_offset);
-            canvas.fill_rect(Rect::new(pos.x-1, pos.y-1, grid_square_size+2, grid_square_size+2))?;
+        // Draw ghost piece outline
+        canvas.set_draw_color(Color::RGB(255, 255, 255));
+        assets.block_sheet.set_alpha_mod(255);
+        for (col, row) in piece.get_orientation().iter() {
+            if *row as i32 + piece.ghost_position >= OFFSCREEN_ROWS as i32 {
+                let pos = get_grid_position(*col as i32 + piece.position.col, *row as i32 + piece.ghost_position - OFFSCREEN_ROWS as i32, grid_square_size, matrix_offset);
+                canvas.fill_rect(Rect::new(pos.x-1, pos.y-1, grid_square_size+2, grid_square_size+2))?;
+            }
         }
-    }
 
-    // Draw ghost piece
-    assets.block_sheet.set_alpha_mod(192);
-    for (col, row) in piece.get_orientation().iter() {
-        if *row as i32 + piece.ghost_position >= OFFSCREEN_ROWS as i32 {
-            let pos = get_grid_position(*col as i32 + piece.position.col, *row as i32 + piece.ghost_position - OFFSCREEN_ROWS as i32, grid_square_size, matrix_offset);
-            canvas.copy(&assets.block_sheet, assets.block_sprites[piece.color as usize], Rect::new(pos.x, pos.y, grid_square_size, grid_square_size))?;
+        // Draw ghost piece
+        assets.block_sheet.set_alpha_mod(192);
+        for (col, row) in piece.get_orientation().iter() {
+            if *row as i32 + piece.ghost_position >= OFFSCREEN_ROWS as i32 {
+                let pos = get_grid_position(*col as i32 + piece.position.col, *row as i32 + piece.ghost_position - OFFSCREEN_ROWS as i32, grid_square_size, matrix_offset);
+                canvas.copy(&assets.block_sheet, assets.block_sprites[piece.color as usize], Rect::new(pos.x, pos.y, grid_square_size, grid_square_size))?;
+            }
         }
     }
 
