@@ -38,6 +38,11 @@ impl SceneTrait for GameScene {
     }
 
     fn update(&mut self, elapsed: u128) -> SceneAction {
+        if self.inputs[GameInput::Reset] {
+            *self = GameScene::new().expect("Reset Error");
+            return SceneAction::Continue;
+        }
+
         self.game.update(&mut self.inputs, elapsed);
         SceneAction::Continue
     }
