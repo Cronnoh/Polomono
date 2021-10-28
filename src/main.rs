@@ -42,9 +42,6 @@ fn main() -> Result<(), String> {
 
     let mut scene_manager = scenes::SceneManager::new(scenes::Scene::MainMenu(scenes::menu_scene::MenuScene::new()?));
 
-    // let r2: game::rulesets::Ruleset = load_data_ron(std::path::Path::new("data/rulesets/ruleset1.ron"))?;
-    // println!("{:?}", r2);
-
     let mut current_time = Instant::now();
     let mut event_pump = sdl_context.event_pump()?;
     'running: loop {

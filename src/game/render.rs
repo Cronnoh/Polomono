@@ -9,12 +9,15 @@ use sdl2::{
     render::{WindowCanvas, Texture},
 };
 
+const MATRIX_FRAME_WIDTH: usize = 160;
+const MATRIX_FRAME_HEIGHT: usize = 320;
+
 pub fn render(canvas: &mut WindowCanvas, game: &Game, assets: &mut GameAssets) -> Result<(), String> {
     canvas.set_draw_color(Color::RGB(64, 64, 64));
     canvas.clear();
 
     // Scale the grid appropriately based on the size of the matrix
-    let grid_square_size = std::cmp::min(16 * 20 / (game.matrix.len() - OFFSCREEN_ROWS), 16 * 10 / game.matrix[0].len()) as u32;
+    let grid_square_size = std::cmp::min(MATRIX_FRAME_HEIGHT / (game.matrix.len() - OFFSCREEN_ROWS), MATRIX_FRAME_WIDTH / game.matrix[0].len()) as u32;
 
     draw_matrix(canvas, &game.matrix, grid_square_size, assets)?;
     draw_piece(canvas, &game.piece, grid_square_size, assets)?;

@@ -135,10 +135,6 @@ impl Game {
         if self.gamemode.end_condition.check(&self.stats) {
             return;
         }
-        if self.ruleset.level_up_condition.check(&self.level_stats) {
-            self.level_up();
-        }
-
         if self.game_over {
             return;
         }
@@ -209,6 +205,10 @@ impl Game {
             self.handle_line_clears(bonus);
             extend_queue(&mut self.piece_queue, self.ruleset.preview_count, &self.piece_data, &mut self.randomizer);
             self.piece = next_piece(&mut self.piece_queue, &self.matrix);
+        }
+
+        if self.ruleset.level_up_condition.check(&self.level_stats) {
+            self.level_up();
         }
     }
 
@@ -328,7 +328,7 @@ impl Game {
         self.level += 1;
         self.level_stats = Stats::new();
         self.gamemode.level_up(&mut self.ruleset, self.level);
-        let prev_style = self.randomizer.style; 
+        let prev_style = self.randomizer.style;
         self.randomizer = Randomizer::new(self.ruleset.piece_list.clone(), self.ruleset.randomizer);
         if self.randomizer.style != prev_style {
             // Remove pieces in the piece queue so that the newer randomizer takes effect sooner
@@ -336,6 +336,45 @@ impl Game {
             let leftovers = 3;
             self.piece_queue.drain(0..(self.piece_queue.len()-leftovers));
             extend_queue(&mut self.piece_queue, self.ruleset.preview_count, &self.piece_data, &mut self.randomizer);
+        }
+        if self.matrix.len() != self.ruleset.matrix_height
+        || self.matrix[0].len() != self.ruleset.matrix_width {
+            self.adjust_matrix_size();
+        }
+    }
+
+    fn adjust_matrix_size(&mut self) {
+        let mut new_matrix = vec![vec![PieceColor::Empty; self.ruleset.matrix_width]; self.ruleset.matrix_height+crate::OFFSCREEN_ROWS];
+
+        // if the new matrix is larger than the old, the stack should be centered horizontally
+        let new_center = (new_matrix[0].len()/2) as i32;
+        let old_center = (self.matrix[0].len()/2) as i32;
+        let left_edge = std::cmp::max(0, new_center - old_center) as usize;
+
+        // if it is smaller, columns should be cut off each side evenly
+        let horizontal_change = new_matrix[0].len() as i32 - self.matrix[0].len() as i32;
+        let (cut_from_left, cut_from_right) = if horizontal_change >= 0 {
+            (0, 0)
+        } else if horizontal_change % 2 == 0 {
+            ((horizontal_change.abs()/2) as usize, (horizontal_change.abs()/2) as usize)
+        } else {
+            ((horizontal_change.abs()/2) as usize, (horizontal_change.abs()/2 + 1) as usize)
+        };
+
+        for row in new_matrix.iter_mut().rev() {
+            let mut old_row = match self.matrix.pop() {
+                Some(x) => x,
+                None => break,
+            };
+            let len = old_row.len();
+            old_row.drain(len-cut_from_right..);
+            old_row.drain(0..cut_from_left);
+            row.splice(left_edge..left_edge+old_row.len(), old_row);
+        }
+        self.matrix = new_matrix;
+        self.piece.reset_position(&self.matrix);
+        if let Some(held) = &mut self.held {
+            held.reset_position(&self.matrix);
         }
     }
 }

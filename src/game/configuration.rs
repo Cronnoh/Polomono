@@ -76,7 +76,7 @@ impl GameMode {
     pub fn level_up(&self, ruleset: &mut Ruleset, level: usize) {
         match &self.level_up_style {
             LevelUp::RuleChange(level_list) => {
-                if level < level_list.len() {
+                if level-1 < level_list.len() {
                     *ruleset = crate::load_data_ron(Path::new(&format!("data/rulesets/{}.ron", level_list[level-1]))).unwrap();
                 }
             },
