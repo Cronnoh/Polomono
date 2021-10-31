@@ -78,7 +78,7 @@ pub struct Game {
 
 impl Game {
     pub fn new(config: &Config) -> Result<Self, String> {
-        let gamemode: GameMode = load_data_ron(std::path::Path::new("data/gamemodes/gamemode1.ron"))?;
+        let gamemode: GameMode = load_data_ron(std::path::Path::new("data/gamemodes/marathon.ron"))?;
         let ruleset: Ruleset = load_data_ron(std::path::Path::new(&format!("data/rulesets/{}.ron", gamemode.initial_ruleset)))?;
 
         let matrix = vec![vec![PieceColor::Empty; ruleset.matrix_width]; ruleset.matrix_height+crate::OFFSCREEN_ROWS];

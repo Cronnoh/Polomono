@@ -81,7 +81,7 @@ impl GameMode {
                 }
             },
             LevelUp::GravityIncrease(grav_increase) => {
-                ruleset.gravity += grav_increase;
+                ruleset.gravity = std::cmp::max(0, ruleset.gravity as i128 - *grav_increase as i128) as u128;
             },
         }
     }
