@@ -14,18 +14,16 @@ pub struct GameScene {
 
     game: Game,
     inputs: EnumMap<GameInput, bool>,
-    // piece_data: HashMap<String, PieceType>,
-    // gamemode_name: String,
+    gamemode_name: String,
 }
 
 impl GameScene {
-    pub fn new() -> Result<Self, String> {
-        let config = crate::load_data(Path::new("config/config.toml"))?;
-
+    pub fn new(gamemode_name: String) -> Result<Self, String> {
         Ok(Self {
             bindings: crate::load_data(Path::new("config/control_config.toml"))?,
-            game: Game::new(&config)?,
+            game: Game::new(&gamemode_name)?,
             inputs: EnumMap::default(),
+            gamemode_name,
         })
     }
 }
@@ -39,7 +37,7 @@ impl SceneTrait for GameScene {
 
     fn update(&mut self, elapsed: u128) -> SceneAction {
         if self.inputs[GameInput::Reset] {
-            *self = GameScene::new().expect("Reset Error");
+            *self = GameScene::new(self.gamemode_name.clone()).expect("Reset Error");
             return SceneAction::Continue;
         }
 

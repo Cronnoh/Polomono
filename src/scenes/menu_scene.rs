@@ -38,7 +38,7 @@ impl SceneTrait for MenuScene {
     fn update(&mut self, _elapsed: u128) -> SceneAction {
         match self.menu.update(&mut self.inputs) {
             MenuStatus::Continue => SceneAction::Continue,
-            MenuStatus::Game => SceneAction::Push(Scene::Game(GameScene::new().unwrap())),
+            MenuStatus::Game(mode) => SceneAction::Push(Scene::Game(GameScene::new(mode).unwrap())),
             MenuStatus::Settings => SceneAction::Continue,
             MenuStatus::Exit => SceneAction::Pop,
         }

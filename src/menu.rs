@@ -26,7 +26,7 @@ enum MenuTile {
 pub enum MenuStatus {
     Exit,
     Continue,
-    Game,
+    Game(String),
     Settings,
 } 
 
@@ -68,9 +68,9 @@ impl Menu {
             (true, false) => {
                 input[MenuInput::Accept] = false;
                 match MENU_GRID[self.grid_position.1][self.grid_position.0] {
-                    MenuTile::Option1 => MenuStatus::Game,
-                    MenuTile::Option2 => MenuStatus::Continue,
-                    MenuTile::Option3 => MenuStatus::Continue,
+                    MenuTile::Option1 => MenuStatus::Game("marathon".to_string()),
+                    MenuTile::Option2 => MenuStatus::Game("gamemode1".to_string()),
+                    MenuTile::Option3 => MenuStatus::Game("tighten".to_string()),
                     MenuTile::Option4 => MenuStatus::Continue,
                     MenuTile::Option5 => MenuStatus::Continue,
                     MenuTile::Option6 => MenuStatus::Settings,

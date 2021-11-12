@@ -52,7 +52,7 @@ impl SceneManager {
         let next = match self.stack.last_mut().unwrap() {
             Scene::Game(game) => SceneManager::run_scene(game, canvas, assets, input_events, elapsed)?,
             Scene::MainMenu(menu) => SceneManager::run_scene(menu, canvas, assets, input_events, elapsed)?,
-            Scene::Settings => SceneAction::Push(Scene::Game(game_scene::GameScene::new()?)),
+            Scene::Settings => SceneAction::Push(Scene::Game(game_scene::GameScene::new("marathon".to_string())?)),
         };
 
         self.handle_scene_action(next);
