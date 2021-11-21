@@ -37,7 +37,7 @@ impl SceneTrait for GameScene {
 
     fn update(&mut self, elapsed: u128) -> SceneAction {
         if self.inputs[GameInput::Reset] {
-            *self = GameScene::new(self.gamemode_name.clone()).expect("Reset Error");
+            *self = GameScene::new(std::mem::take(&mut self.gamemode_name)).expect("Reset Error");
             return SceneAction::Continue;
         }
 
@@ -46,6 +46,6 @@ impl SceneTrait for GameScene {
     }
 
     fn render(&self, canvas: &mut sdl2::render::WindowCanvas, assets: &mut Assets) -> Result<(), String> {
-        render::render(canvas, &self.game, assets.get_game_assets()?)
+        render::render(canvas, &self.game, assets.get_game_assets(&self.gamemode_name)?)
     }
 }

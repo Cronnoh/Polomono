@@ -8,13 +8,15 @@ pub struct GameAssets<'a, 'b> {
     pub stat_font: Font<'a, 'b>,
     pub stat_labels: Vec<Texture<'a>>,
     pub frame: Texture<'a>,
+    pub gamemode_name_texture: Texture<'a>,
 }
 
 impl<'a, 'b> GameAssets<'a, 'b> {
-    pub fn new(texture_creator: &'a TextureCreator<WindowContext>, ttf_context: &'a Sdl2TtfContext) -> Result<Self, String> {
+    pub fn new(texture_creator: &'a TextureCreator<WindowContext>, ttf_context: &'a Sdl2TtfContext, gamemode_name: &str) -> Result<Self, String> {
         let (block_sheet, block_sprites) = load_block_textures(texture_creator, Path::new("assets/blocks.png"))?;
         let (stat_font, stat_labels)  = load_font(texture_creator, ttf_context, Path::new("assets/Hack-Bold.ttf"))?;
         let frame = load_frame(&texture_creator, Path::new("assets/frame.png"))?;
+        let gamemode_name_texture = load_gamemode_name_texture(texture_creator, ttf_context, Path::new("assets/Hack-Bold.ttf"), gamemode_name)?;
 
         Ok(Self {
             block_sheet,
@@ -22,6 +24,7 @@ impl<'a, 'b> GameAssets<'a, 'b> {
             stat_font,
             stat_labels,
             frame,
+            gamemode_name_texture,
         })
     }
 
@@ -36,6 +39,11 @@ impl<'a, 'b> GameAssets<'a, 'b> {
 
         Ok(textures)
     }
+}
+
+fn load_gamemode_name_texture<'a, 'b>(texture_creator: &'a TextureCreator<WindowContext>, ttf_context: &'a Sdl2TtfContext, path: &Path, gamemode_name: &str) -> Result<Texture<'a>, String> {
+    let font = ttf_context.load_font(path, 72)?;
+    create_text_texture(gamemode_name, Color::RGBA(0, 0, 0, 64), &font, &texture_creator)
 }
 
 fn load_block_textures<'a>(texture_creator: &'a TextureCreator<WindowContext>, path: &Path) -> Result<(Texture<'a>, Vec<Rect>), String> {

@@ -19,6 +19,7 @@ pub fn render(canvas: &mut WindowCanvas, game: &Game, assets: &mut GameAssets) -
     // Scale the grid appropriately based on the size of the matrix
     let grid_square_size = std::cmp::min(MATRIX_FRAME_HEIGHT / (game.matrix.len() - OFFSCREEN_ROWS), MATRIX_FRAME_WIDTH / game.matrix[0].len()) as u32;
 
+    draw_gamemode_name(canvas, assets)?;
     draw_matrix(canvas, &game.matrix, grid_square_size, assets)?;
     draw_piece(canvas, &game.piece, grid_square_size, assets, game.ruleset.ghost_piece_enabled)?;
     draw_preview(canvas, game, assets)?;
@@ -27,6 +28,12 @@ pub fn render(canvas: &mut WindowCanvas, game: &Game, assets: &mut GameAssets) -
     draw_frame(canvas, assets)?;
 
     canvas.present();
+    Ok(())
+}
+
+fn draw_gamemode_name(canvas: &mut WindowCanvas, assets: &mut GameAssets) -> Result<(), String> {
+    let query = assets.gamemode_name_texture.query();
+    canvas.copy(&assets.gamemode_name_texture, None, Rect::new(5, 370-query.height as i32, query.width, query.height))?;
     Ok(())
 }
 
