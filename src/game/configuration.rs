@@ -43,6 +43,18 @@ pub enum Goal {
     Lines,
 }
 
+#[derive(Deserialize, enum_map::Enum, Clone, Copy)]
+pub enum GameStat {
+    Score,
+    Time,
+    Lines,
+    Pieces,
+    Level,
+    PiecesPerSecond,
+    // Streak,
+    // Combo,
+}
+
 #[derive(Deserialize)]
 pub enum LevelUp {
     RuleChange(Vec<String>),
@@ -68,6 +80,7 @@ impl ScoreMultiplier {
 pub struct GameMode {
     pub end_condition: EndCondition,
     pub goal: Goal,
+    pub displayed_stats: Vec<GameStat>,
     pub level_up_style: LevelUp,
     pub initial_ruleset: String,
 }

@@ -1,5 +1,6 @@
-use super::Game;
+use super::{Game, Stats};
 use super::assets::GameAssets;
+use super::configuration::{GameMode, EndCondition, GameStat};
 use super::piece::{Piece, shape_dimensions, shape_top_left};
 use crate::OFFSCREEN_ROWS;
 
@@ -24,7 +25,7 @@ pub fn render(canvas: &mut WindowCanvas, game: &Game, assets: &mut GameAssets) -
     draw_piece(canvas, &game.piece, grid_square_size, assets, game.ruleset.ghost_piece_enabled)?;
     draw_preview(canvas, game, assets)?;
     draw_held(canvas, game, assets)?;
-    draw_stats(canvas, &game.stats, assets)?;
+    draw_stats(canvas, game.level, &game.stats, &game.level_stats, &game.gamemode, &game.ruleset.level_up_condition, assets)?;
     draw_frame(canvas, assets)?;
 
     canvas.present();
@@ -117,28 +118,47 @@ fn draw_held(canvas: &mut WindowCanvas, game: &Game, assets: &mut GameAssets) ->
     Ok(())
 }
 
-fn draw_stats(canvas: &mut WindowCanvas, stats: &crate::game::Stats, assets: &mut GameAssets) -> Result<(), String> {
+fn draw_stats(canvas: &mut WindowCanvas, level: usize, stats: &Stats, level_stats: &Stats, gamemode: &GameMode, level_up_cond: &EndCondition, assets: &mut GameAssets) -> Result<(), String> {
     let texture_creator = canvas.texture_creator();
-    let mut stat_textures = assets.create_stat_textures(&stats, &texture_creator)?;
+    let mut stat_textures = assets.create_stat_textures(stats, level, &texture_creator)?;
     let stats_offset_x = 440;
     let stats_offset_y = 28;
-    let label_number_spacing = 18;
     let vertical_stat_spacing = 75;
 
-    for (i, (number, label)) in stat_textures.iter_mut().zip(&assets.stat_labels).enumerate() {
-        let label_query = label.query();
+    for(i, stat) in gamemode.displayed_stats.iter().enumerate() {
+        let label = &assets.stat_labels[*stat];
+        let number = &mut stat_textures[*stat];
         let label_y = stats_offset_y + vertical_stat_spacing * i as i32;
-        canvas.copy(&label, None, Rect::new(stats_offset_x, label_y, label_query.width, label_query.height))?;
+        draw_stat_and_label(canvas, label, number, stats_offset_x, label_y)?;
+    }
+
+    // Draw level
+    let label = &assets.stat_labels[GameStat::Level];
+    let number = &mut stat_textures[GameStat::Level];
+    draw_stat_and_label(canvas, label, number, 100, 80)?;
+
+    // Next level label
+    let next_level = assets.create_next_level_label(level_up_cond, level_stats, &texture_creator)?;
+    let query = next_level.query();
+    canvas.copy(&next_level, None, Rect::new(100, 125, query.width, query.height))?;
+
+    Ok(())
+}
+
+fn draw_stat_and_label(canvas: &mut WindowCanvas, label: &Texture, number: &mut Texture, stats_offset_x: i32, label_y: i32) -> Result<(), String> {
+        let label_number_spacing = 18;
+
+        let label_query = label.query();
+        canvas.copy(label, None, Rect::new(stats_offset_x, label_y, label_query.width, label_query.height))?;
 
         let query = number.query();
         let number_y = label_y + label_number_spacing;
         number.set_color_mod(96, 96, 96);
-        canvas.copy(&number, None, Rect::new(stats_offset_x+1, number_y+1, query.width, query.height))?;
+        canvas.copy(number, None, Rect::new(stats_offset_x+1, number_y+1, query.width, query.height))?;
         number.set_color_mod(255, 255, 255);
-        canvas.copy(&number, None, Rect::new(stats_offset_x, number_y, query.width, query.height))?;
-    }
+        canvas.copy(number, None, Rect::new(stats_offset_x, number_y, query.width, query.height))?;
 
-    Ok(())
+        Ok(())
 }
 
 fn draw_frame(canvas: &mut WindowCanvas, assets: &GameAssets) -> Result<(), String> {

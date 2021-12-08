@@ -45,6 +45,15 @@ impl Stats {
             pieces_placed: 0,
         }
     }
+
+    pub fn pieces_per_second(&self) -> f64 {
+        let seconds = self.time as f64 / 1_000_000.0;
+        if seconds > 0.0 {
+            self.pieces_placed as f64 / seconds
+        } else {
+            0.0
+        }
+    }
 }
 
 pub struct Game {

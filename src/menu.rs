@@ -71,7 +71,7 @@ impl Menu {
                     MenuTile::Option1 => MenuStatus::Game("marathon".to_string()),
                     MenuTile::Option2 => MenuStatus::Game("gamemode1".to_string()),
                     MenuTile::Option3 => MenuStatus::Game("tighten".to_string()),
-                    MenuTile::Option4 => MenuStatus::Continue,
+                    MenuTile::Option4 => MenuStatus::Game("sprint".to_string()),
                     MenuTile::Option5 => MenuStatus::Continue,
                     MenuTile::Option6 => MenuStatus::Settings,
                 }
