@@ -137,7 +137,7 @@ impl Game {
             stats,
             level_stats,
             randomizer,
-            level: 0,
+            level: 1,
 
             // Config values are in milliseconds, must be converted to microseconds
             das: config.das as u128 * 1000,

@@ -89,8 +89,9 @@ impl GameMode {
     pub fn level_up(&self, ruleset: &mut Ruleset, level: usize) {
         match &self.level_up_style {
             LevelUp::RuleChange(level_list) => {
-                if level-1 < level_list.len() {
-                    *ruleset = crate::load_data_ron(Path::new(&format!("data/rulesets/{}.ron", level_list[level-1]))).unwrap();
+                // Minus 2 because level starts at 1, arrays start at 0, and the level 1 ruleset is not in the list
+                if level-2 < level_list.len() {
+                    *ruleset = crate::load_data_ron(Path::new(&format!("data/rulesets/{}.ron", level_list[level-2]))).unwrap();
                 }
             },
             LevelUp::GravityIncrease(grav_increase) => {
