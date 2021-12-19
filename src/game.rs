@@ -7,7 +7,7 @@ mod configuration;
 use piece::*;
 use randomizer::*;
 use crate::{input::*, load_data_ron};
-use configuration::{GameMode, Ruleset};
+use configuration::{GameMode, Ruleset, EndCondition};
 
 use std::collections::HashMap;
 use serde::Deserialize;
@@ -44,6 +44,20 @@ impl Stats {
             lines_cleared: 0,
             pieces_placed: 0,
         }
+    }
+
+    fn next_level(previous_level: &Self, condition: &EndCondition) -> Self {
+        let mut new_stats = Self::new();
+        match condition {
+            EndCondition::Lines(line_goal) => {
+                new_stats.lines_cleared = previous_level.lines_cleared - line_goal;
+            }
+            EndCondition::Score(score_goal) => {
+                new_stats.score = previous_level.score - score_goal;
+            }
+            _ => {},
+        }
+        new_stats
     }
 
     pub fn pieces_per_second(&self) -> f64 {
@@ -217,7 +231,9 @@ impl Game {
             self.piece = next_piece(&mut self.piece_queue, &self.matrix);
         }
 
-        if self.ruleset.level_up_condition.check(&self.level_stats) {
+        // While instead of if because multiple levels can be gained at once
+        // Infinite loop if level up condition is always true (e.g. Lines(0)), should be checked when gamemode loaded
+        while self.ruleset.level_up_condition.check(&self.level_stats) {
             self.level_up();
         }
     }
@@ -317,7 +333,7 @@ impl Game {
         self.level_stats.score += points;
     }
 
-    /* Lose is the piece is placed entirely offscreen */
+    /* Lose if the piece is placed entirely offscreen */
     fn check_loss(&self) -> bool {
         let mut lowest = 0;
         for (_, row) in self.piece.get_orientation().iter() {
@@ -336,7 +352,7 @@ impl Game {
 
     fn level_up(&mut self) {
         self.level += 1;
-        self.level_stats = Stats::new();
+        self.level_stats = Stats::next_level(&self.level_stats, &self.ruleset.level_up_condition);
         self.gamemode.level_up(&mut self.ruleset, self.level);
         let prev_style = self.randomizer.style;
         self.randomizer = Randomizer::new(self.ruleset.piece_list.clone(), self.ruleset.randomizer);
