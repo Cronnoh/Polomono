@@ -229,13 +229,14 @@ impl Game {
             self.handle_line_clears(bonus);
             extend_queue(&mut self.piece_queue, self.ruleset.preview_count, &self.piece_data, &mut self.randomizer);
             self.piece = next_piece(&mut self.piece_queue, &self.matrix);
+
+            // While instead of if because multiple levels can be gained at once
+            // Infinite loop if level up condition is always true (e.g. Lines(0)), should be checked when gamemode loaded
+            while self.ruleset.level_up_condition.check(&self.level_stats) {
+                self.level_up();
+            }
         }
 
-        // While instead of if because multiple levels can be gained at once
-        // Infinite loop if level up condition is always true (e.g. Lines(0)), should be checked when gamemode loaded
-        while self.ruleset.level_up_condition.check(&self.level_stats) {
-            self.level_up();
-        }
     }
 
     fn handle_piece_movement(&mut self, elapsed: u128, direction: HDirection) {
@@ -363,7 +364,7 @@ impl Game {
             self.piece_queue.drain(0..(self.piece_queue.len()-leftovers));
             extend_queue(&mut self.piece_queue, self.ruleset.preview_count, &self.piece_data, &mut self.randomizer);
         }
-        if self.matrix.len() != self.ruleset.matrix_height
+        if self.matrix.len() != self.ruleset.matrix_height + crate::OFFSCREEN_ROWS
         || self.matrix[0].len() != self.ruleset.matrix_width {
             self.adjust_matrix_size();
         }

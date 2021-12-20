@@ -57,7 +57,7 @@ impl<'a, 'b> GameAssets<'a, 'b> {
         let text = match &level_up_cond {
             EndCondition::Time(min, sec) => {
                 let microseconds = (min * 60 + sec) as u128 * 1_000_000;
-                let remaining = microseconds - level_stats.time;
+                let remaining = microseconds.checked_sub(level_stats.time).unwrap_or(0);
                 let mut time = format_time(remaining);
                 time.truncate(5);
                 time
