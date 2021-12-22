@@ -99,6 +99,23 @@ impl GameMode {
             },
         }
     }
+
+    pub fn validate(&self) -> Result<(), String> {
+        let ruleset: Ruleset = crate::load_data_ron(Path::new(&format!("data/rulesets/{}.ron", &self.initial_ruleset)))?;
+        ruleset.validate(&self.initial_ruleset)?;
+        match &self.level_up_style {
+            // Validate that all rulesets in the gamemode exist, and are well formed
+            LevelUp::RuleChange(ruleset_list) => {
+
+                for ruleset_name in ruleset_list {
+                    let ruleset: Ruleset = crate::load_data_ron(Path::new(&format!("data/rulesets/{}.ron", ruleset_name)))?;
+                    ruleset.validate(ruleset_name)?;
+                }
+            }
+            _ => {},
+        }
+        Ok(())
+    }
 }
 
 #[derive(Deserialize)]
@@ -119,4 +136,18 @@ pub struct Ruleset {
     pub cannot_start_with: Option<Vec<String>>,
     pub starting_randomizer: Option<randomizer::RandomizerStyle>,
     pub randomizer: randomizer::RandomizerStyle,
+}
+
+impl Ruleset {
+    fn validate(&self, ruleset_name: &str) -> Result<(), String> {
+        // Check that level_up_conditions will not always be true (which would cause an infinite loop on level up)
+        match self.level_up_condition {
+            EndCondition::Lines(x) if x < 1 => return Err(format!("Ruleset {} has invalid level_up_condition: Lines({})", ruleset_name, x)),
+            EndCondition::Score(x) if x < 1 => return Err(format!("Ruleset {} has invalid level_up_condition: Score({})", ruleset_name, x)),
+            EndCondition::Time(min, sec) if min < 1 && sec < 1 => return Err(format!("Ruleset {} has invalid level_up_condition: Time({}, {})", ruleset_name, min, sec)),
+            EndCondition::Pieces(x) if x < 1 => return Err(format!("Ruleset {} has invalid level_up_condition: Pieces({})", ruleset_name, x)),
+            _ => {}
+        }
+        Ok(())
+    }
 }

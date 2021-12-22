@@ -102,6 +102,7 @@ pub struct Game {
 impl Game {
     pub fn new(gamemode_name: &str) -> Result<Self, String> {
         let gamemode: GameMode = load_data_ron(std::path::Path::new(&format!("data/gamemodes/{}.ron", gamemode_name)))?;
+        gamemode.validate()?;
         let ruleset: Ruleset = load_data_ron(std::path::Path::new(&format!("data/rulesets/{}.ron", gamemode.initial_ruleset)))?;
         let config: Config = crate::load_data(std::path::Path::new("config/config.toml"))?;
 
@@ -482,25 +483,20 @@ fn read_inputs(input: &EnumMap<GameInput, bool>) -> (MovementAction, RotationAct
 /* Checks that all kick tables in the piece data are found in the wall kick data */
 fn validate_data(piece_data: &HashMap<String, PieceType>, wall_kick_data: &HashMap<String, KickData>, piece_list: &[String]) -> Result<(), String> {
     for (piece_name, data) in piece_data.iter() {
-        match wall_kick_data.get(&data.kick_table) {
-            Some(_) => continue,
-            None => {
-                return Err(
-                    format!("Piece {} has kick table {} in piece_data.toml, but that table was not found in wall_kick_data.toml.", piece_name, data.kick_table)
-                );
-            }
+        if wall_kick_data.get(&data.kick_table).is_none() {
+            return Err(
+                format!("Piece {} has kick table {} in piece_data.toml, but that table was not found in wall_kick_data.toml.", piece_name, data.kick_table)
+            );
         }
     }
 
     for piece in piece_list.iter() {
-        match piece_data.get(piece) {
-            Some(_) => continue,
-            None => {
-                return Err(
-                    format!("Piece {} found in config.toml piece_list, be is not defined in piece_data.toml.", piece)
-                );
-            }
+        if piece_data.get(piece).is_none() {
+            return Err(
+                format!("Piece {} found in config.toml piece_list, be is not defined in piece_data.toml.", piece)
+            );
         }
     }
+
     Ok(())
 }
