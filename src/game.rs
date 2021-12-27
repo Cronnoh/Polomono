@@ -165,7 +165,7 @@ impl Game {
         }
         self.stats.time += elapsed;
         self.level_stats.time += elapsed;
-        let (movement_action, rotation_action) = read_inputs(&input);
+        let (movement_action, rotation_action) = read_inputs(input);
         let mut placed_piece = false;
 
         match movement_action {
@@ -410,7 +410,7 @@ impl Game {
 fn next_piece(piece_queue: &mut Vec<Piece>, matrix: &Matrix) -> Piece {
     let mut piece = piece_queue.pop()
         .expect("Popped from empty piece queue");
-    piece.reset_position(&matrix);
+    piece.reset_position(matrix);
     piece
 }
 

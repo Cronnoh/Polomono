@@ -119,7 +119,7 @@ impl Piece {
         }
         self.position.col += h_dir as i32;
         self.position.row += v_dir as i32;
-        self.update_ghost(&matrix);
+        self.update_ghost(matrix);
         match h_dir {
             HDirection::Left | HDirection::Right => {
                 self.last_move_was_rotation = false;
@@ -136,7 +136,7 @@ impl Piece {
             return self.wall_kick(matrix, kick_data, rotation);
         }
         self.rotation = target_rotation;
-        self.update_ghost(&matrix);
+        self.update_ghost(matrix);
         self.last_move_was_rotation = true;
         true
     }
@@ -151,7 +151,7 @@ impl Piece {
                 self.rotation = target_rotation;
                 self.position.col += *h as i32;
                 self.position.row += *v as i32;
-                self.update_ghost(&matrix);
+                self.update_ghost(matrix);
                 self.last_move_was_rotation = true;
                 return true;
             }
@@ -207,7 +207,7 @@ impl Piece {
         self.position.col = inital_column;
         self.position.row = 0;
         self.rotation = 0;
-        self.update_ghost(&matrix);
+        self.update_ghost(matrix);
     }
 
     pub fn check_bonus(&self, matrix: &Matrix) -> bool {

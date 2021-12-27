@@ -23,8 +23,8 @@ impl<'a, 'b> GameAssets<'a, 'b> {
         let stat_font = ttf_context.load_font(Path::new("assets/Hack-Bold.ttf"), 28)?;
         let next_level_font = ttf_context.load_font(Path::new("assets/Hack-Bold.ttf"), 14)?;
         let label_font = ttf_context.load_font(Path::new("assets/Hack-Bold.ttf"), 18)?;
-        let stat_labels = load_stat_labels(&texture_creator, label_font)?;
-        let frame = load_frame(&texture_creator, Path::new("assets/frame.png"))?;
+        let stat_labels = load_stat_labels(texture_creator, label_font)?;
+        let frame = load_frame(texture_creator, Path::new("assets/frame.png"))?;
         let gamemode_name_texture = load_gamemode_name_texture(texture_creator, ttf_context, Path::new("assets/Hack-Bold.ttf"), gamemode_name)?;
 
         Ok(Self {
@@ -57,7 +57,7 @@ impl<'a, 'b> GameAssets<'a, 'b> {
         let text = match &level_up_cond {
             EndCondition::Time(min, sec) => {
                 let microseconds = (min * 60 + sec) as u128 * 1_000_000;
-                let remaining = microseconds.checked_sub(level_stats.time).unwrap_or(0);
+                let remaining = microseconds.saturating_sub(level_stats.time);
                 let mut time = format_time(remaining);
                 time.truncate(5);
                 time
