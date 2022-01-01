@@ -1,5 +1,7 @@
 pub mod render;
 pub mod assets;
+use std::path::Path;
+
 use crate::input::MenuInput;
 
 use enum_map::EnumMap;
@@ -22,15 +24,14 @@ pub struct Menu {
 }
 
 impl Menu {
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> Result<Self, String> {
+        let gamemode_names: Vec<String> = crate::load_data_ron(Path::new(&"config/menu_config.ron"))?;
+        let mut tiles: Vec<MenuTile> = gamemode_names.iter().map(|name| MenuTile::Gamemode(name.to_string())).collect();
+        tiles.push(MenuTile::Settings);
+        Ok(Self {
             selected_index: 0,
-            tiles: vec![
-                MenuTile::Gamemode("marathon".to_string()),
-                MenuTile::Gamemode("sprint".to_string()),
-                MenuTile::Settings,
-            ],
-        }
+            tiles,
+        })
     }
 
     pub fn update(&mut self, input: &mut EnumMap<MenuInput, bool>) -> MenuStatus {

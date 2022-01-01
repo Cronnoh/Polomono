@@ -19,11 +19,12 @@ impl<'a> MenuAssets<'a> {
 
         let font = ttf_context.load_font(Path::new("assets/Hack-Bold.ttf"), 28)?;
         let label_color = Color::RGB(255, 255, 255);
-        let tile_labels = vec![
-            create_text_texture("Marathon", label_color, &font, texture_creator)?,
-            create_text_texture("Sprint", label_color, &font, texture_creator)?,
-            create_text_texture("Settings", label_color, &font, texture_creator)?,
-        ];
+        let mut tile_labels = Vec::new();
+        let label_text: Vec<String> = crate::load_data_ron(Path::new(&"config/menu_config.ron"))?;
+        for text in label_text {
+            tile_labels.push(create_text_texture(&text.to_uppercase(), label_color, &font, texture_creator)?);
+        }
+        tile_labels.push(create_text_texture("SETTINGS", label_color, &font, texture_creator)?);
 
         Ok(Self {
             menu_sheet,

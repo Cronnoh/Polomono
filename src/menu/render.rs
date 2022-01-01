@@ -13,11 +13,11 @@ pub fn render(menu: &Menu, canvas: &mut WindowCanvas, assets: &MenuAssets) -> Re
         };
         let query = label.query();
         let position = Rect::new(32, 9+72*row as i32, query.width, query.height);
-        canvas.copy(label, None, position)?;
         if i != 0 {
-            canvas.set_draw_color(Color::RGBA(0, 0, 0, 128));
-            canvas.draw_rect(position)?;
+            canvas.set_draw_color(Color::RGB(0, 0, 0));
+            canvas.fill_rect(position)?;
         }
+        canvas.copy(label, None, position)?;
     }
     canvas.present();
     Ok(())

@@ -22,7 +22,7 @@ impl MenuScene {
 
         Ok(Self {
             bindings: crate::load_data(Path::new("config/menu_control_config.toml"))?,
-            menu: Menu::new(),
+            menu: Menu::new()?,
             inputs: EnumMap::default(),
         })
     }
