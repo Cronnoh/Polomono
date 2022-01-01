@@ -22,7 +22,7 @@ impl MenuScene {
 
         Ok(Self {
             bindings: crate::load_data(Path::new("config/menu_control_config.toml"))?,
-            menu: Menu {grid_position: (0, 0)},
+            menu: Menu::new(),
             inputs: EnumMap::default(),
         })
     }
@@ -45,7 +45,7 @@ impl SceneTrait for MenuScene {
     }
 
     fn render(&self, canvas: &mut WindowCanvas, assets: &mut Assets) -> Result<(), String> {
-        menu::render::render(&self.menu, canvas, assets.get_menu_assets()?);
+        menu::render::render(&self.menu, canvas, assets.get_menu_assets()?)?;
         Ok(())
     }
 }

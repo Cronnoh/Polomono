@@ -4,6 +4,7 @@ use enum_map::{EnumMap, enum_map};
 use sdl2::{image::LoadTexture, pixels::Color, rect::{Rect}, render::{Texture, BlendMode, TextureCreator}, ttf::{Font, Sdl2TtfContext}, video::WindowContext};
 
 use crate::game::configuration::{EndCondition, GameStat};
+use crate::assets::create_text_texture;
 
 use super::Stats;
 
@@ -101,15 +102,6 @@ fn load_stat_labels<'a>(texture_creator: &'a TextureCreator<WindowContext>, labe
 
 fn load_frame<'a>(texture_creator: &'a TextureCreator<WindowContext>, path: &Path) -> Result<Texture<'a>, String> {
     texture_creator.load_texture(path)
-}
-
-fn create_text_texture<'a, T>(text: &str, color: Color, font: &Font, texture_creator: &'a TextureCreator<T>) -> Result<Texture<'a>, String> {
-    let surface = font
-        .render(text)
-        .blended(color)
-        .map_err(|e| e.to_string())?;
-    texture_creator.create_texture_from_surface(&surface)
-        .map_err(|e| e.to_string())
 }
 
 fn format_time(microseconds: u128) -> String {

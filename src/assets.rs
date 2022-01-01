@@ -1,9 +1,10 @@
 use crate::game::assets::GameAssets;
 use crate::menu::assets::MenuAssets;
 
-use sdl2::ttf::Sdl2TtfContext;
+use sdl2::pixels::Color;
+use sdl2::ttf::{Sdl2TtfContext, Font};
 use sdl2::video::WindowContext;
-use sdl2::render::TextureCreator;
+use sdl2::render::{TextureCreator, Texture};
 
 pub struct Assets<'a, 'b> {
     texture_creator: &'a TextureCreator<WindowContext>,
@@ -35,8 +36,17 @@ impl<'a, 'b> Assets<'a, 'b> {
 
     pub fn get_menu_assets(&mut self) -> Result<&mut MenuAssets<'a>, String> {
         if self.menu_assets.is_none() {
-            self.menu_assets = Some(MenuAssets::new(self.texture_creator)?);
+            self.menu_assets = Some(MenuAssets::new(self.texture_creator, self.ttf_context)?);
         }
         Ok(self.menu_assets.as_mut().unwrap())
     }
+}
+
+pub fn create_text_texture<'a, T>(text: &str, color: Color, font: &Font, texture_creator: &'a TextureCreator<T>) -> Result<Texture<'a>, String> {
+    let surface = font
+        .render(text)
+        .blended(color)
+        .map_err(|e| e.to_string())?;
+    texture_creator.create_texture_from_surface(&surface)
+        .map_err(|e| e.to_string())
 }
