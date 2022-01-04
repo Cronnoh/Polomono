@@ -1,16 +1,12 @@
-use std::path::Path;
+use std::{path::Path, hash::{Hash, Hasher}, collections::hash_map::DefaultHasher};
 
-use sdl2::{image::LoadTexture, rect::Rect, render::{Texture, TextureCreator}, video::WindowContext, ttf::Sdl2TtfContext, pixels::Color};
+use sdl2::{image::LoadTexture, render::{Texture, TextureCreator}, video::WindowContext, ttf::Sdl2TtfContext, pixels::Color};
 use crate::assets::create_text_texture;
 
 pub struct MenuAssets<'a> {
     pub menu_sheet: Texture<'a>,
-    pub menu_tile: Rect,
-    pub menu_tile_selected: Rect,
-    pub menu_page_arrow: Rect,
-    pub menu_page_dot: Rect,
-    pub menu_page_dot_selected: Rect,
     pub tile_labels: Vec<Texture<'a>>,
+    pub tile_colors: Vec<Color>,
 }
 
 impl<'a> MenuAssets<'a> {
@@ -20,20 +16,30 @@ impl<'a> MenuAssets<'a> {
         let font = ttf_context.load_font(Path::new("assets/Hack-Bold.ttf"), 28)?;
         let label_color = Color::RGB(255, 255, 255);
         let mut tile_labels = Vec::new();
+        let mut tile_colors = Vec::new();
         let label_text: Vec<String> = crate::load_data_ron(Path::new(&"config/menu_config.ron"))?;
         for text in label_text {
             tile_labels.push(create_text_texture(&text.to_uppercase(), label_color, &font, texture_creator)?);
+            tile_colors.push(generate_color(text));
         }
         tile_labels.push(create_text_texture("SETTINGS", label_color, &font, texture_creator)?);
+        tile_colors.push(Color::RGB(128, 128, 128));
 
         Ok(Self {
             menu_sheet,
-            menu_tile: Rect::new(0, 80, 298, 72),
-            menu_tile_selected: Rect::new(0, 0, 298, 80),
-            menu_page_arrow: Rect::new(0, 152, 6, 10),
-            menu_page_dot: Rect::new(6, 152, 10, 10),
-            menu_page_dot_selected: Rect::new(16, 152, 10, 10),
             tile_labels,
+            tile_colors,
         })
     }
+}
+
+/* Calculate a color based on the hash of the argument lol */
+fn generate_color<T: Hash>(thing: T) -> Color {
+    let mut s = DefaultHasher::new();
+    thing.hash(&mut s);
+    let hash = s.finish();
+    let r = (hash & 0xFF) as u8;
+    let g = (hash >> 8 & 0xFF) as u8;
+    let b = (hash >> 16 & 0xFF) as u8;
+    Color::RGB(r, g, b)
 }
