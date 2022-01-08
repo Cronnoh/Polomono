@@ -201,8 +201,13 @@ impl Piece {
     }
 
     pub fn reset_position(&mut self, matrix: &Matrix) {
-        let (width, _) = shape_dimensions(&self.shape[0]);
-        let (leftmost, _) = shape_top_left(&self.shape[0]);
+        let (mut width, _) = shape_dimensions(&self.shape[0]);
+        let (mut leftmost, _) = shape_top_left(&self.shape[0]);
+        if width > matrix[0].len() {
+            self.monomino_transform();
+            width = 1;
+            leftmost = 0;
+        }
         let inital_column = (matrix[0].len() - width) as i32 / 2 - leftmost;
         self.position.col = inital_column;
         self.position.row = 0;
@@ -218,6 +223,12 @@ impl Piece {
         let collides_left = self.check_collision(matrix, -1, 0, self.rotation);
         let collides_right = self.check_collision(matrix, 1, 0, self.rotation);
         collides_up && collides_left && collides_right
+    }
+
+    /* Transform the piece into a monomino, used if the piece is too wide for the matrix */
+    fn monomino_transform(&mut self) {
+        self.shape = [vec![(0,0)], vec![(0,0)], vec![(0,0)], vec![(0,0)]];
+        self.spin_bonus = false;
     }
 }
 
