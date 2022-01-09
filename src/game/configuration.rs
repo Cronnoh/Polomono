@@ -1,10 +1,10 @@
-use super::randomizer;
+use super::randomizer::{self, RandomizerStyle};
 
-use std::path::Path;
+use std::{path::Path, collections::HashSet};
 
 use serde::{Deserialize};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone, Copy)]
 pub enum EndCondition {
     Time(u32, u32),
     Score(u32),
@@ -56,12 +56,33 @@ pub enum GameStat {
 }
 
 #[derive(Deserialize)]
-pub enum LevelUp {
-    RuleChange(Vec<String>),
-    GravityIncrease(u128),
+pub enum RulesetModifier {
+    LoadRuleset(String),
+    SetCondition(EndCondition),
+    SetScoreMultiplier(ScoreMultiplier),
+    SetGravity(u128),
+    SetMatrixSize(usize, usize),
+    SetPieceList(Vec<String>),
+    AddPiece(String),
+    RemovePiece(String),
+    SetLockDelay(u128),
+    SetPreviewCount(usize),
+    CanHold(bool),
+    ShowGhostPiece(bool),
+    ChangeRandomizer(RandomizerStyle),
+    ClearMatrix,
+    End,
 }
 
-#[derive(Deserialize)]
+#[derive(Hash, PartialEq, Eq)]
+pub enum Command {
+    RegeneratePieces,
+    ResizeMatrix,
+    ClearMatrix,
+    End,
+}
+
+#[derive(Deserialize, Clone, Copy)]
 pub enum ScoreMultiplier {
     Level,
     Special(u32),
@@ -81,38 +102,32 @@ pub struct GameMode {
     pub end_condition: EndCondition,
     pub goal: Goal,
     pub displayed_stats: Vec<GameStat>,
-    pub level_up_style: LevelUp,
+    pub level_list: Vec<Vec<RulesetModifier>>,
     pub initial_ruleset: String,
 }
 
 impl GameMode {
-    pub fn level_up(&self, ruleset: &mut Ruleset, level: usize) {
-        match &self.level_up_style {
-            LevelUp::RuleChange(level_list) => {
-                // Minus 2 because level starts at 1, arrays start at 0, and the level 1 ruleset is not in the list
-                if level-2 < level_list.len() {
-                    *ruleset = crate::load_data_ron(Path::new(&format!("data/rulesets/{}.ron", level_list[level-2]))).unwrap();
+    pub fn level_up(&self, ruleset: &mut Ruleset, level: usize) -> Result<HashSet<Command>, String> {
+        let mut commands = HashSet::new();
+        // Minus 2 because level starts at 1, arrays start at 0, and the level 1 ruleset is not in the list
+        if level-2 < self.level_list.len() {
+            for modifier in self.level_list[level-2].iter() {
+                if let Some(new_commands) = ruleset.apply_modifier(modifier)? {
+                    commands.extend(new_commands);
                 }
-            },
-            LevelUp::GravityIncrease(grav_increase) => {
-                ruleset.gravity = std::cmp::max(0, ruleset.gravity as i128 - *grav_increase as i128) as u128;
-            },
+            }
         }
+        Ok(commands)
     }
 
     pub fn validate(&self) -> Result<(), String> {
-        let ruleset: Ruleset = crate::load_data_ron(Path::new(&format!("data/rulesets/{}.ron", &self.initial_ruleset)))?;
+        let mut ruleset: Ruleset = crate::load_data_ron(Path::new(&format!("data/rulesets/{}.ron", &self.initial_ruleset)))?;
         ruleset.validate(&self.initial_ruleset)?;
-        match &self.level_up_style {
-            // Validate that all rulesets in the gamemode exist, and are well formed
-            LevelUp::RuleChange(ruleset_list) => {
 
-                for ruleset_name in ruleset_list {
-                    let ruleset: Ruleset = crate::load_data_ron(Path::new(&format!("data/rulesets/{}.ron", ruleset_name)))?;
-                    ruleset.validate(ruleset_name)?;
-                }
-            }
-            _ => {},
+        // Validate that all rulesets in the gamemode exist, and are well formed
+        for i in 2..self.level_list.len() {
+            self.level_up(&mut ruleset, i)?;
+            ruleset.validate(&format!("Level {}", i))?;
         }
         Ok(())
     }
@@ -139,6 +154,66 @@ pub struct Ruleset {
 }
 
 impl Ruleset {
+    pub fn apply_modifier(&mut self, modifier: &RulesetModifier) -> Result<Option<Vec<Command>>, String> {
+        match modifier {
+            RulesetModifier::LoadRuleset(ruleset_name) => {
+                *self = crate::load_data_ron(Path::new(&format!("data/rulesets/{}.ron", ruleset_name)))?;
+                return Ok(Some(vec![Command::RegeneratePieces, Command::ResizeMatrix]));
+            }
+            RulesetModifier::SetCondition(x) => {
+                self.level_up_condition = *x;
+            }
+            RulesetModifier::SetScoreMultiplier(x) => {
+                self.score_multiplier = *x;
+            }
+            RulesetModifier::SetGravity(x) => {
+                self.gravity = *x;
+            }
+            RulesetModifier::SetMatrixSize(x, y) => {
+                self.matrix_width = *x;
+                self.matrix_height = *y;
+                return Ok(Some(vec![Command::ResizeMatrix]));
+            }
+            RulesetModifier::SetPieceList(list) => {
+                self.piece_list = list.to_vec();
+                return Ok(Some(vec![Command::RegeneratePieces]));
+            }
+            RulesetModifier::AddPiece(piece_name) => {
+                self.piece_list.push(piece_name.to_string());
+                return Ok(Some(vec![Command::RegeneratePieces]));
+            }
+            RulesetModifier::RemovePiece(piece_name) => {
+                if let Some(index) = self.piece_list.iter().position(|x| *x == *piece_name) {
+                    self.piece_list.swap_remove(index);
+                    return Ok(Some(vec![Command::RegeneratePieces]));
+                }
+            }
+            RulesetModifier::SetLockDelay(x) => {
+                self.lock_delay = *x;
+            }
+            RulesetModifier::SetPreviewCount(x) => {
+                self.preview_count = *x;
+            }
+            RulesetModifier::CanHold(x) => {
+                self.hold_enabled = *x;
+            }
+            RulesetModifier::ShowGhostPiece(x) => {
+                self.ghost_piece_enabled = *x;
+            }
+            RulesetModifier::ChangeRandomizer(style) => {
+                self.randomizer = *style;
+                return Ok(Some(vec![Command::RegeneratePieces]));
+            }
+            RulesetModifier::ClearMatrix => {
+                return Ok(Some(vec![Command::ClearMatrix]));
+            }
+            RulesetModifier::End => {
+                return Ok(Some(vec![Command::End]));
+            }
+        }
+        Ok(None)
+    }
+
     fn validate(&self, ruleset_name: &str) -> Result<(), String> {
         // Check that level_up_conditions will not always be true (which would cause an infinite loop on level up)
         match self.level_up_condition {

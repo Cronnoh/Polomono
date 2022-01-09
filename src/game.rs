@@ -228,16 +228,15 @@ impl Game {
             self.stats.pieces_placed += 1;
             self.level_stats.pieces_placed += 1;
             self.handle_line_clears(bonus);
-            extend_queue(&mut self.piece_queue, self.ruleset.preview_count, &self.piece_data, &mut self.randomizer);
-            self.piece = next_piece(&mut self.piece_queue, &self.matrix);
 
             // While instead of if because multiple levels can be gained at once
             // Infinite loop if level up condition is always true (e.g. Lines(0)), should be checked when gamemode loaded
             while self.ruleset.level_up_condition.check(&self.level_stats) {
                 self.level_up();
             }
+            extend_queue(&mut self.piece_queue, self.ruleset.preview_count, &self.piece_data, &mut self.randomizer);
+            self.piece = next_piece(&mut self.piece_queue, &self.matrix);
         }
-
     }
 
     fn handle_piece_movement(&mut self, elapsed: u128, direction: HDirection) {
@@ -355,20 +354,24 @@ impl Game {
     fn level_up(&mut self) {
         self.level += 1;
         self.level_stats = Stats::next_level(&self.level_stats, &self.ruleset.level_up_condition);
-        self.gamemode.level_up(&mut self.ruleset, self.level);
-        let prev_style = self.randomizer.style;
+        let commands = self.gamemode.level_up(&mut self.ruleset, self.level).unwrap();
+        for command in commands {
+            match command {
+                configuration::Command::RegeneratePieces => self.change_randomizer(),
+                configuration::Command::ResizeMatrix => self.adjust_matrix_size(),
+                configuration::Command::ClearMatrix => self.clear_matrix(),
+                configuration::Command::End => self.game_over = true,
+            }
+        }
+    }
+
+    fn change_randomizer(&mut self) {
         self.randomizer = Randomizer::new(self.ruleset.piece_list.clone(), self.ruleset.randomizer);
-        if self.randomizer.style != prev_style {
-            // Remove pieces in the piece queue so that the newer randomizer takes effect sooner
-            // Leave some pieces to reduce jarring changes
-            let leftovers = 3;
-            self.piece_queue.drain(0..(self.piece_queue.len()-leftovers));
-            extend_queue(&mut self.piece_queue, self.ruleset.preview_count, &self.piece_data, &mut self.randomizer);
-        }
-        if self.matrix.len() != self.ruleset.matrix_height + crate::OFFSCREEN_ROWS
-        || self.matrix[0].len() != self.ruleset.matrix_width {
-            self.adjust_matrix_size();
-        }
+        // Remove pieces in the piece queue so that the newer randomizer takes effect sooner
+        // Leave some pieces to reduce jarring changes
+        let leftovers = std::cmp::min(3, self.piece_queue.len());
+        self.piece_queue.drain(0..(self.piece_queue.len()-leftovers));
+        extend_queue(&mut self.piece_queue, self.ruleset.preview_count, &self.piece_data, &mut self.randomizer);
     }
 
     fn adjust_matrix_size(&mut self) {
@@ -403,6 +406,14 @@ impl Game {
         self.piece.reset_position(&self.matrix);
         if let Some(held) = &mut self.held {
             held.reset_position(&self.matrix);
+        }
+    }
+
+    fn clear_matrix(&mut self) {
+        for row in &mut self.matrix {
+            for col in row {
+                *col = PieceColor::Empty;
+            }
         }
     }
 }
@@ -481,6 +492,7 @@ fn read_inputs(input: &EnumMap<GameInput, bool>) -> (MovementAction, RotationAct
 }
 
 /* Checks that all kick tables in the piece data are found in the wall kick data */
+// Only checks the first ruleset's piece list!
 fn validate_data(piece_data: &HashMap<String, PieceType>, wall_kick_data: &HashMap<String, KickData>, piece_list: &[String]) -> Result<(), String> {
     for (piece_name, data) in piece_data.iter() {
         if wall_kick_data.get(&data.kick_table).is_none() {

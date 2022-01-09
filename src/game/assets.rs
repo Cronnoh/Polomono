@@ -66,7 +66,7 @@ impl<'a, 'b> GameAssets<'a, 'b> {
             EndCondition::Score(next) => format!("{}S", next - level_stats.score),
             EndCondition::Lines(next) => format!("{}L", next - level_stats.lines_cleared),
             EndCondition::Pieces(next) => format!("{}P", next - level_stats.pieces_placed),
-            EndCondition::Endless => String::new(),
+            EndCondition::Endless => String::from(" "),
         };
 
         let color = Color::RGB(192, 192, 192);
