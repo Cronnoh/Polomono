@@ -27,10 +27,7 @@ high score list (H)
 sfx (H)
 title screen, options menu (H)
 
-redo menu to list style?
-read menu options from file
 convert all toml to ron?
 
 bugs:
     crash when exit menu
-    max level

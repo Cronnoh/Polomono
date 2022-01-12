@@ -3,9 +3,14 @@ use super::{Menu, assets::MenuAssets};
 use sdl2::{pixels::Color, rect::Rect, render::{WindowCanvas, BlendMode}};
 
 pub fn render(menu: &Menu, canvas: &mut WindowCanvas, assets: &MenuAssets) -> Result<(), String>{
-    canvas.set_draw_color(Color::RGB(64, 64, 64));
+    canvas.set_draw_color(Color::RGB(48, 64, 96));
     canvas.clear();
-    for (row, i) in (-2..=2).enumerate() {
+    canvas.copy(&assets.menu_bg, None, None)?;
+
+    let tile_width = 320;
+    let tile_height = 64;
+
+    for (row, i) in (-3..=3).enumerate() {
         let tile_index = menu.selected_index as i32 + i;
         let label = match assets.tile_labels.get(tile_index as usize) {
             Some(x) => x,
@@ -13,14 +18,15 @@ pub fn render(menu: &Menu, canvas: &mut WindowCanvas, assets: &MenuAssets) -> Re
         };
 
         // Draw Tile
-        let query = label.query();
-        let x_pos = 32 - 25 * i.abs();
-        let y_pos = 9 + 72 * row as i32;
-        let tile_dest = Rect::new(x_pos, y_pos, 320, 54);
+        let x_pos = 32 - 23 * i.abs();
+        let y_pos = tile_height as i32 * row as i32 - tile_height as i32/2 - 12;
+        let tile_dest = Rect::new(x_pos, y_pos, tile_width, tile_height);
         // Draw Label
+        let query = label.query();
         let label_dest = Rect::new(x_pos + 12, y_pos + 13, query.width, query.height);
         canvas.set_draw_color(assets.tile_colors[tile_index as usize]);
         canvas.fill_rect(tile_dest)?;
+        canvas.copy(&assets.menu_tile_overlay, None, tile_dest)?;
         canvas.copy(label, None, label_dest)?;
         // Darken unselected tiles
         if i != 0 {
