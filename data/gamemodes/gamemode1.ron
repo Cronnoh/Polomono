@@ -1,0 +1,15 @@
+(
+    end_condition: Score(100000),
+    goal: Time,
+    displayed_stats: [Score, Time, Lines, Pieces],
+    level_list: [
+        [LoadRuleset("big_matrix"), SetGravity(200000)],
+        [LoadRuleset("standard"), SetGravity(200000), ClearMatrix],
+        [LoadRuleset("big_matrix"), SetGravity(150000)],
+        [LoadRuleset("standard"), SetGravity(150000), ClearMatrix],
+        [LoadRuleset("big_matrix"), SetGravity(125000)],
+        [LoadRuleset("standard"), SetGravity(125000), ClearMatrix],
+        [LoadRuleset("big_matrix"), SetCondition(Endless)],
+    ],
+    initial_ruleset: "standard",
+)

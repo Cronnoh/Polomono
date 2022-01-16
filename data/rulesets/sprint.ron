@@ -1,0 +1,18 @@
+(
+    level_up_condition: Endless,
+    score_multiplier: Level,
+
+    matrix_height: 20,
+    matrix_width: 10,
+
+    gravity: 250000,
+    lock_delay: 500000,
+    preview_count: 5,
+    hold_enabled: true,
+    ghost_piece_enabled: true,
+
+    piece_list: ["I", "T", "O", "J", "L", "S", "Z"],
+    cannot_start_with: Some(["O", "S", "Z"]),
+    starting_randomizer: None,
+    randomizer: NBag,
+)

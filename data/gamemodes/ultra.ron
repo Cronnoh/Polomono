@@ -1,0 +1,7 @@
+(
+    end_condition: Time(3, 0),
+    goal: Score,
+    displayed_stats: [Score, Time, Lines, Pieces],
+    level_list: [[]],
+    initial_ruleset: "ultra",
+)

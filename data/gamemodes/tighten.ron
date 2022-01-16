@@ -1,0 +1,18 @@
+(
+    end_condition: Endless,
+    goal: Score,
+    displayed_stats: [Score, Time, Lines, Pieces],
+    level_list: [
+        [SetMatrixSize(10, 20)],
+        [SetMatrixSize(9, 20)],
+        [SetMatrixSize(8, 20)],
+        [SetMatrixSize(7, 20)],
+        [SetMatrixSize(6, 15)],
+        [SetMatrixSize(5, 15)],
+        [SetMatrixSize(4, 15)],
+        [SetMatrixSize(4, 10)],
+        [SetMatrixSize(4, 8)],
+        [End]
+    ],
+    initial_ruleset: "tighten",
+)

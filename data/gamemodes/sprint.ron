@@ -1,0 +1,7 @@
+(
+    end_condition: Lines(40),
+    goal: Time,
+    displayed_stats: [Lines, Time, PiecesPerSecond, Pieces],
+    level_list: [[]],
+    initial_ruleset: "sprint",
+)
