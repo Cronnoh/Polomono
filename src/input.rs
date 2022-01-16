@@ -20,7 +20,7 @@ pub enum GameInput {
     Reset,
 }
 
-#[derive(Serialize, Deserialize, enum_map::Enum, Clone, Copy)]
+#[derive(Serialize, Deserialize, enum_map::Enum, Clone, Copy, PartialEq, Eq)]
 pub enum MenuInput {
     Up,
     Down,
