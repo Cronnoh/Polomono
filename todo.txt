@@ -28,6 +28,9 @@ sfx (H)
 title screen, options menu (H)
 
 convert all toml to ron?
+menu controls
+high score stuff
+error screen
 
 bugs:
     crash when exit menu

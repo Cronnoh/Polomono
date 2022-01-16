@@ -15,14 +15,14 @@ pub trait SceneTrait {
 pub enum SceneAction {
     Continue,
     Push(Scene),
-    Replace(Scene),
+    // Replace(Scene),
     Pop,
 }
 
 pub enum Scene {
     Game(game_scene::GameScene),
     MainMenu(menu_scene::MenuScene),
-    Settings,
+    // Settings,
 }
 
 pub struct SceneManager {
@@ -40,10 +40,10 @@ impl SceneManager {
         match action {
             SceneAction::Continue => {},
             SceneAction::Push(x) => self.stack.push(x),
-            SceneAction::Replace(x) => {
-                drop(self.stack.pop());
-                self.stack.push(x);
-            }
+            // SceneAction::Replace(x) => {
+            //     drop(self.stack.pop());
+            //     self.stack.push(x);
+            // }
             SceneAction::Pop => drop(self.stack.pop()),
         }
     }
@@ -52,7 +52,6 @@ impl SceneManager {
         let next = match self.stack.last_mut().unwrap() {
             Scene::Game(game) => SceneManager::run_scene(game, canvas, assets, input_events, elapsed)?,
             Scene::MainMenu(menu) => SceneManager::run_scene(menu, canvas, assets, input_events, elapsed)?,
-            Scene::Settings => SceneAction::Push(Scene::Game(game_scene::GameScene::new("marathon".to_string())?)),
         };
 
         self.handle_scene_action(next);
